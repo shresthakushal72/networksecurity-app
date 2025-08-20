@@ -53,3 +53,4 @@ A Flutter application that scans for available WiFi networks and displays them s
 This app requires location permissions to scan for WiFi networks, as per Android security requirements. The app will only scan for networks and display information - it cannot connect to networks or access network passwords.
 "# networksecurity-app" 
 "# networksecurity-app" 
+"# networksecurity-app" 
