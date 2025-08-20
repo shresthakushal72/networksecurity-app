@@ -103,6 +103,8 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
               fontWeight: FontWeight.bold,
               color: Colors.grey[800],
             ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
           const SizedBox(height: 8),
           Text(
@@ -112,6 +114,8 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
               color: Colors.grey[600],
             ),
             textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
           ),
         ],
       ),
@@ -135,25 +139,30 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
             ),
             child: Column(
               children: [
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      _getStatusIcon(),
-                      color: _getStatusColor(),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _controller.scanStatus,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w500,
+                    Row(
+                      children: [
+                        Icon(
+                          _getStatusIcon(),
+                          color: _getStatusColor(),
+                          size: 20,
                         ),
-                        maxLines: 8,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _controller.scanStatus,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 6,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -199,58 +208,68 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
             children: [
               // Permission/Settings buttons (when needed)
               if (_controller.scanStatus.contains('Enable') || _controller.scanStatus.contains('Grant') || _controller.scanStatus.contains('requires'))
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     // Location Settings button
-                    Expanded(
+                    SizedBox(
+                      width: 100,
                       child: ElevatedButton.icon(
                         onPressed: () => _openLocationSettings(),
-                        icon: const Icon(Icons.location_on, size: 18),
-                        label: const Text('Location'),
+                        icon: const Icon(Icons.location_on, size: 16),
+                        label: const Text(
+                          'Location',
+                          style: TextStyle(fontSize: 12),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                       ),
                     ),
                     
-                    const SizedBox(width: 8),
-                    
                     // WiFi Settings button
-                    Expanded(
+                    SizedBox(
+                      width: 100,
                       child: ElevatedButton.icon(
                         onPressed: () => _openWiFiSettings(),
-                        icon: const Icon(Icons.wifi_off, size: 18),
-                        label: const Text('WiFi'),
+                        icon: const Icon(Icons.wifi_off, size: 16),
+                        label: const Text(
+                          'WiFi',
+                          style: TextStyle(fontSize: 12),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                       ),
                     ),
                     
-                    const SizedBox(width: 8),
-                    
                     // App Permissions button
-                    Expanded(
+                    SizedBox(
+                      width: 100,
                       child: ElevatedButton.icon(
                         onPressed: () => _requestPermissions(),
-                        icon: const Icon(Icons.security, size: 18),
-                        label: const Text('Permissions'),
+                        icon: const Icon(Icons.security, size: 16),
+                        label: const Text(
+                          'Permissions',
+                          style: TextStyle(fontSize: 12),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.purple,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
                       ),
@@ -347,12 +366,16 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
                   size: 24,
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  'Found ${_controller.networks.length} Networks',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
+                Expanded(
+                  child: Text(
+                    'Found ${_controller.networks.length} Networks',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
               ],
@@ -442,6 +465,7 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
               children: [
                 // Header row with WiFi icon, name, and badges
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // WiFi icon with signal strength indicator
                     Container(
@@ -479,7 +503,7 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     
                     // Network name and details
                     Expanded(
@@ -494,6 +518,7 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
                               color: Colors.black87,
                             ),
                             overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -502,46 +527,49 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
                               fontSize: 12,
                               color: Colors.grey[600],
                             ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ],
                       ),
                     ),
                     
-                    // Badges column
+                    // Badges column - make it more compact
                     Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // Connected badge
                         if (network.isConnected)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.green,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Text(
                               'CONNECTED',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 8,
+                                fontSize: 7,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
                         
-                        const SizedBox(height: 4),
+                        if (network.isConnected) const SizedBox(height: 3),
                         
                         // Frequency band badge
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: Color(network.frequencyBandColor),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             network.frequencyBand,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 8,
+                              fontSize: 7,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -554,31 +582,28 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
                 const SizedBox(height: 16),
                 
                 // Network details in a grid layout
-                Row(
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    Expanded(
-                      child: _buildDetailItem(
-                        'Security',
-                        _getShortSecurity(network.capabilities),
-                        Icons.security,
-                        Colors.orange,
-                      ),
+                    _buildDetailItem(
+                      'Security',
+                      _getShortSecurity(network.capabilities),
+                      Icons.security,
+                      Colors.orange,
                     ),
-                    Expanded(
-                      child: _buildDetailItem(
-                        'Band',
-                        network.frequencyBand,
-                        Icons.radio,
-                        Color(network.frequencyBandColor),
-                      ),
+                    _buildDetailItem(
+                      'Band',
+                      network.frequencyBand,
+                      Icons.radio,
+                      Color(network.frequencyBandColor),
                     ),
-                    Expanded(
-                      child: _buildDetailItem(
-                        'Level',
-                        '${network.level}',
-                        Icons.signal_cellular_alt,
-                        Color(network.signalColor),
-                      ),
+                    _buildDetailItem(
+                      'Level',
+                      '${network.level}',
+                      Icons.signal_cellular_alt,
+                      Color(network.signalColor),
                     ),
                   ],
                 ),
@@ -593,33 +618,39 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
   /// Build detail item for network card
   Widget _buildDetailItem(String label, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      width: 80,
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
         border: Border.all(color: color.withOpacity(0.3), width: 1),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(height: 4),
+          Icon(icon, size: 14, color: color),
+          const SizedBox(height: 3),
           Text(
             label,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 9,
               color: color,
               fontWeight: FontWeight.w500,
             ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 2),
           Text(
             value,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 10,
               color: color,
               fontWeight: FontWeight.bold,
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
         ],
