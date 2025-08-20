@@ -95,9 +95,6 @@ class WiFiScannerController {
       final isConnected = connectedNetwork?.ssid == ap.ssid;
       return WiFiNetwork.fromAccessPoint(ap, isConnected: isConnected);
     }).toList();
-
-    // Reorder to show connected network at top
-    _reorderNetworks();
     
     _isScanning = false;
     _scanStatus = 'Found ${_networks.length} networks';
@@ -157,13 +154,6 @@ class WiFiScannerController {
     return null;
   }
 
-  /// Reorder networks to show connected network at top
-  void _reorderNetworks() {
-    final connectedNetworks = _networks.where((n) => n.isConnected).toList();
-    final otherNetworks = _networks.where((n) => !n.isConnected).toList();
-    _networks = [...connectedNetworks, ...otherNetworks];
-  }
-
   /// Get connected network
   WiFiNetwork? get connectedNetwork {
     try {
@@ -173,10 +163,8 @@ class WiFiScannerController {
     }
   }
 
-  /// Get other available networks
-  List<WiFiNetwork> get otherNetworks {
-    return _networks.where((n) => !n.isConnected).toList();
-  }
+  /// Get all networks (no separation needed)
+  List<WiFiNetwork> get allNetworks => _networks;
 
   /// Dispose resources
   void dispose() {
