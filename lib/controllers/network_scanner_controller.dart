@@ -29,10 +29,14 @@ class NetworkScannerController {
   /// Start network device scanning
   Future<void> startNetworkScan() async {
     _isScanning = true;
-    _scanStatus = 'Scanning network for devices...';
+    _scanStatus = 'Initializing scan...';
     _devices.clear();
 
     try {
+      // Show progress updates
+      await Future.delayed(const Duration(milliseconds: 200));
+      _scanStatus = 'Scanning network for devices...';
+      
       // Simulate network scanning with realistic device discovery
       await _simulateNetworkScan();
       
@@ -41,6 +45,24 @@ class NetworkScannerController {
     } catch (e) {
       _isScanning = false;
       _scanStatus = 'Scan failed: $e';
+    }
+  }
+
+  /// Quick scan for faster results (fewer devices)
+  Future<void> startQuickScan() async {
+    _isScanning = true;
+    _scanStatus = 'Quick scan in progress...';
+    _devices.clear();
+
+    try {
+      // Quick scan with fewer devices
+      await _simulateQuickScan();
+      
+      _isScanning = false;
+      _scanStatus = 'Quick scan complete - Found ${_devices.length} devices';
+    } catch (e) {
+      _isScanning = false;
+      _scanStatus = 'Quick scan failed: $e';
     }
   }
 
@@ -138,12 +160,50 @@ class NetworkScannerController {
       isOnline: true,
       openPorts: '80, 631, 9100',
       services: 'HTTP, IPP, Raw printing',
-      securityRisk: 'Medium - Network printer',
+      securityRisk: 'Medium - IoT device',
       riskColor: 0xFFFFEB3B, // Yellow
     ));
 
-    // Simulate scan delay
-    await Future.delayed(const Duration(seconds: 3));
+    // Reduced scan delay for faster response
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    _devices = devices;
+  }
+
+  /// Simulate quick network scanning (faster, fewer devices)
+  Future<void> _simulateQuickScan() async {
+    List<NetworkDevice> devices = [];
+    
+    // Only essential devices for quick scan
+    devices.add(NetworkDevice(
+      ipAddress: '192.168.1.1',
+      hostname: 'router.home',
+      macAddress: 'AA:BB:CC:DD:EE:FF',
+      deviceType: 'Router/Gateway',
+      manufacturer: 'TP-Link',
+      isOnline: true,
+      openPorts: '80, 443, 22',
+      services: 'HTTP, HTTPS, SSH',
+      securityRisk: 'Low - Router management',
+      riskColor: 0xFF4CAF50, // Green
+    ));
+
+    // Check for CCTV cameras (high priority)
+    devices.add(NetworkDevice(
+      ipAddress: '192.168.1.200',
+      hostname: 'camera-01',
+      macAddress: 'CC:TV:CA:ME:RA:01',
+      deviceType: 'Security Camera',
+      manufacturer: 'Hikvision',
+      isOnline: true,
+      openPorts: '80, 554, 8000',
+      services: 'HTTP, RTSP, Web interface',
+      securityRisk: 'High - Potential security camera',
+      riskColor: 0xFFF44336, // Red
+    ));
+
+    // Very fast scan delay
+    await Future.delayed(const Duration(milliseconds: 200));
     
     _devices = devices;
   }

@@ -498,7 +498,7 @@ class _WiFiDetailsViewState extends State<WiFiDetailsView> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.search),
-              label: Text(_networkController.isScanning ? 'Scanning...' : 'Scan Network Devices'),
+              label: Text(_networkController.isScanning ? 'Scanning...' : 'Full Network Scan'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: Colors.purple,
@@ -507,17 +507,59 @@ class _WiFiDetailsViewState extends State<WiFiDetailsView> {
             ),
           ),
           
+          const SizedBox(height: 12),
+          
+          // Quick Scan Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _networkController.isScanning ? null : _startQuickScan,
+              icon: _networkController.isScanning 
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.flash_on),
+              label: Text(_networkController.isScanning ? 'Scanning...' : 'Quick Scan (Faster)'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+          
           const SizedBox(height: 16),
           
-          // Scan Status
-          Text(
-            _networkController.scanStatus,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.purple[600],
-              fontStyle: FontStyle.italic,
+          // Scan Status with Progress
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.purple[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.purple, width: 1),
             ),
-            textAlign: TextAlign.center,
+            child: Column(
+              children: [
+                if (_networkController.isScanning) ...[
+                  LinearProgressIndicator(
+                    backgroundColor: Colors.purple[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                Text(
+                  _networkController.scanStatus,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.purple[600],
+                    fontStyle: FontStyle.italic,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
           
           // Network Security Summary
@@ -680,6 +722,12 @@ class _WiFiDetailsViewState extends State<WiFiDetailsView> {
   /// Start network scan
   void _startNetworkScan() async {
     await _networkController.startNetworkScan();
+    setState(() {});
+  }
+
+  /// Start quick network scan
+  void _startQuickScan() async {
+    await _networkController.startQuickScan();
     setState(() {});
   }
 
