@@ -2,21 +2,32 @@ import '../models/security_analysis.dart';
 import '../models/wifi_network.dart';
 
 /// Controller for WiFi security analysis
+/// This class analyzes WiFi networks for security vulnerabilities and provides recommendations
 class SecurityAnalysisController {
   
-  /// Analyze WiFi network security
+  // ==================== MAIN ANALYSIS METHOD ====================
+
+  /// Analyze WiFi network security and return comprehensive security assessment
+  /// This is the main method that coordinates all security checks
   SecurityAnalysis analyzeNetwork(WiFiNetwork network) {
+    // Step 1: Check WPS (WiFi Protected Setup) status
     final hasWPS = _hasWPSEnabled(network.capabilities);
     final wpsVersion = _detectWPSVersion(network.capabilities, network.frequency);
     final wpsVulnerability = _getWPSVulnerability(wpsVersion);
     final wpsAttackMethods = _getWPSAttackMethods(wpsVersion);
     final wpsRecommendations = _getWPSRecommendations(wpsVersion);
+    
+    // Step 2: Assess overall security risk
     final securityRisk = _getSecurityRisk(network.capabilities, hasWPS);
     final riskColor = _getRiskColor(securityRisk);
+    
+    // Step 3: Analyze encryption and network configuration
     final encryptionStrength = _getEncryptionStrength(network.capabilities);
     final channelSecurity = _getChannelSecurity(network.frequency);
     final hiddenNetworkSecurity = _getHiddenNetworkSecurity(network.ssid);
     final isEnterprise = _isEnterpriseNetwork(network.capabilities);
+    
+    // Step 4: Calculate security score and provide recommendations
     final securityScore = _getSecurityScore(network.capabilities, hasWPS, network.frequency, network.ssid);
     final scoreLabel = _getSecurityScoreLabel(securityScore);
     final scoreColor = _getScoreColor(securityScore);
@@ -41,7 +52,10 @@ class SecurityAnalysisController {
     );
   }
 
-  /// Check if WPS is enabled
+  // ==================== WPS (WiFi Protected Setup) ANALYSIS ====================
+
+  /// Check if WPS is enabled on the network
+  /// WPS can be a security vulnerability if not properly configured
   bool _hasWPSEnabled(String capabilities) {
     if (capabilities.isEmpty) return false;
     
@@ -54,7 +68,8 @@ class SecurityAnalysisController {
         capabilitiesLower.contains(indicator.toLowerCase()));
   }
 
-  /// Detect WPS version
+  /// Detect which version of WPS is being used
+  /// WPS 2.0+ is much more secure than WPS 1.0
   String _detectWPSVersion(String capabilities, int frequency) {
     if (!_hasWPSEnabled(capabilities)) return 'WPS Not Available';
     
@@ -77,7 +92,8 @@ class SecurityAnalysisController {
     return 'WPS Version Unknown - Manual verification required';
   }
 
-  /// Get WPS vulnerability assessment
+  /// Assess the vulnerability level of WPS
+  /// WPS 1.0 is highly vulnerable, WPS 2.0+ is much more secure
   String _getWPSVulnerability(String wpsVersion) {
     if (wpsVersion.contains('WPS 2.0+') || wpsVersion.contains('WPS 2.0')) {
       return 'Low Risk - Modern WPS with rate limiting and lockout protection';
@@ -91,7 +107,8 @@ class SecurityAnalysisController {
     return 'No Risk - WPS not available';
   }
 
-  /// Get WPS attack methods
+  /// List possible attack methods based on WPS version
+  /// WPS 1.0 has several known attack vectors
   List<String> _getWPSAttackMethods(String wpsVersion) {
     List<String> methods = [];
     
@@ -139,7 +156,10 @@ class SecurityAnalysisController {
     return recommendations;
   }
 
-  /// Get encryption strength
+  // ==================== ENCRYPTION AND NETWORK CONFIGURATION ANALYSIS ====================
+
+  /// Get encryption strength of the network
+  /// WPA3 is the most secure, followed by WPA2, WPA, WEP, Open
   String _getEncryptionStrength(String capabilities) {
     if (capabilities.contains('WPA3')) return 'Very Strong (WPA3)';
     if (capabilities.contains('WPA2')) return 'Strong (WPA2)';
@@ -149,7 +169,8 @@ class SecurityAnalysisController {
     return 'Unknown';
   }
 
-  /// Get channel security
+  /// Determine channel security based on frequency
+  /// 2.4 GHz is more prone to interference, 5 GHz is better
   String _getChannelSecurity(int frequency) {
     if (frequency >= 2400 && frequency <= 2483) {
       return '2.4 GHz - Higher congestion, potential interference';
@@ -161,7 +182,8 @@ class SecurityAnalysisController {
     return 'Unknown frequency band';
   }
 
-  /// Get hidden network security
+  /// Assess hidden network security
+  /// Hidden networks are generally less secure as they don't broadcast their SSID
   String _getHiddenNetworkSecurity(String ssid) {
     if (ssid.isEmpty) {
       return 'Hidden Network - Potential security risk (SSID not broadcast)';
@@ -169,14 +191,18 @@ class SecurityAnalysisController {
     return 'Visible Network - Standard SSID broadcasting';
   }
 
-  /// Check if enterprise network
+  /// Check if the network is an enterprise network
+  /// Enterprise networks typically use 802.1X authentication
   bool _isEnterpriseNetwork(String capabilities) {
     return capabilities.contains('802.1X') || 
            capabilities.contains('EAP') || 
            capabilities.contains('RADIUS');
   }
 
-  /// Get security risk
+  // ==================== RISK ASSESSMENT ====================
+
+  /// Get overall security risk level
+  /// This combines encryption, WPS, and other factors
   String _getSecurityRisk(String capabilities, bool hasWPS) {
     if (capabilities.contains('WEP')) return 'High Risk - WEP is vulnerable';
     if (capabilities.contains('WPA') && !capabilities.contains('WPA2') && !capabilities.contains('WPA3')) {
@@ -192,7 +218,7 @@ class SecurityAnalysisController {
     return 'Unknown - Check manually';
   }
 
-  /// Get risk color
+  /// Get risk color based on security risk level
   int _getRiskColor(String risk) {
     if (risk.contains('Very High') || risk.contains('High')) return 0xFFF44336; // Red
     if (risk.contains('Medium-High')) return 0xFFFF9800; // Orange
@@ -202,13 +228,17 @@ class SecurityAnalysisController {
     return 0xFF9E9E9E; // Grey
   }
 
-  /// Get security score
+  // ==================== SECURITY SCORE CALCULATION ====================
+
+  /// Calculate a security score based on various factors
+  /// Higher score indicates better security
   int _getSecurityScore(String capabilities, bool hasWPS, int frequency, String ssid) {
     int score = 100;
     
     // Encryption penalties
-    if (capabilities.contains('WEP')) score -= 40;
-    else if (capabilities.contains('WPA') && !capabilities.contains('WPA2') && !capabilities.contains('WPA3')) score -= 20;
+    if (capabilities.contains('WEP')) {
+      score -= 40;
+    } else if (capabilities.contains('WPA') && !capabilities.contains('WPA2') && !capabilities.contains('WPA3')) score -= 20;
     else if (capabilities.contains('WPA2') && !capabilities.contains('WPA3')) score -= 10;
     else if (capabilities.contains('WPA3')) score += 10;
     
@@ -237,7 +267,7 @@ class SecurityAnalysisController {
     return 'Very Poor';
   }
 
-  /// Get score color
+  /// Get score color based on security score
   int _getScoreColor(int score) {
     if (score >= 80) return 0xFF4CAF50; // Green
     if (score >= 60) return 0xFFFFEB3B; // Yellow
@@ -245,7 +275,9 @@ class SecurityAnalysisController {
     return 0xFFF44336; // Red
   }
 
-  /// Get security recommendations
+  // ==================== RECOMMENDATIONS ====================
+
+  /// Provide comprehensive security recommendations
   List<String> _getSecurityRecommendations(String capabilities, bool hasWPS, int frequency, String ssid) {
     List<String> recommendations = [];
     

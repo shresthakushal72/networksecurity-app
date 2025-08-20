@@ -3,20 +3,26 @@ import '../models/wifi_network.dart';
 import 'dart:async';
 
 /// Controller for WiFi scanning operations
+/// This class handles all WiFi scanning logic, permissions, and auto-scanning
 class WiFiScannerController {
+  // ==================== PRIVATE FIELDS ====================
   List<WiFiNetwork> _networks = [];
   bool _isScanning = false;
   String _scanStatus = 'Ready to scan';
   Timer? _scanTimer;
 
-  // Getters
+  // ==================== PUBLIC GETTERS ====================
   List<WiFiNetwork> get networks => _networks;
   bool get isScanning => _isScanning;
   String get scanStatus => _scanStatus;
 
-  /// Check WiFi scan permissions
+  // ==================== PERMISSION MANAGEMENT ====================
+
+  /// Check if the app has all required permissions for WiFi scanning
+  /// This method checks WiFi scan permissions and location access
   Future<void> checkPermissions() async {
     try {
+      // Check if we can get scan results and start scans
       final canGetScannedResults = await WiFiScan.instance.canGetScannedResults();
       final canStartScan = await WiFiScan.instance.canStartScan();
       
@@ -36,7 +42,10 @@ class WiFiScannerController {
     }
   }
 
-  /// Auto-scan when requirements are met
+  // ==================== AUTO-SCANNING FEATURES ====================
+
+  /// Automatically start scanning when all requirements are met
+  /// This provides a better user experience by scanning automatically
   void _autoScan() {
     // Add a small delay to ensure UI is ready
     Future.delayed(const Duration(milliseconds: 500), () {
@@ -46,7 +55,8 @@ class WiFiScannerController {
     });
   }
 
-  /// Start periodic permission checking for auto-scan
+  /// Start monitoring permissions every 3 seconds for auto-scanning
+  /// This allows the app to automatically scan when permissions become available
   void startPermissionMonitoring() {
     _scanTimer?.cancel();
     _scanTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
@@ -54,7 +64,8 @@ class WiFiScannerController {
     });
   }
 
-  /// Check permissions and auto-scan if available
+  /// Check if permissions are now available and auto-scan if possible
+  /// This method runs every 3 seconds to detect when WiFi/Location become available
   Future<void> _checkAndAutoScan() async {
     try {
       final canGetScannedResults = await WiFiScan.instance.canGetScannedResults();
@@ -73,14 +84,17 @@ class WiFiScannerController {
     }
   }
 
-  /// Start WiFi scanning
+  // ==================== MAIN SCANNING METHODS ====================
+
+  /// Start a WiFi network scan
+  /// This method handles the entire scanning process from start to finish
   Future<void> startScan() async {
     _isScanning = true;
     _scanStatus = 'Scanning...';
     _networks.clear();
 
     try {
-      // First check permissions again
+      // First check permissions again before starting
       final canStartScan = await WiFiScan.instance.canStartScan();
       final canGetResults = await WiFiScan.instance.canGetScannedResults();
       
@@ -96,104 +110,115 @@ class WiFiScannerController {
         // Wait longer and try more times for real devices
         bool scanCompleted = false;
         int attempts = 0;
-        const maxAttempts = 10; // Increased from 3 to 10
+        const maxAttempts = 10; // Increased from 3 to 10 for better reliability
         
         while (!scanCompleted && attempts < maxAttempts) {
-          await Future.delayed(const Duration(seconds: 2)); // Increased from 1 to 2 seconds
           attempts++;
+          _scanStatus = 'Waiting for scan results... Attempt $attempts/$maxAttempts';
           
-          _scanStatus = 'Checking results... Attempt $attempts/$maxAttempts';
+          // Wait 2 seconds between attempts for real devices
+          await Future.delayed(const Duration(seconds: 2));
           
           try {
+            // Try to get scan results
             final results = await WiFiScan.instance.getScannedResults();
             if (results.isNotEmpty) {
-              _scanStatus = 'Found ${results.length} networks!';
-              _processResults(results);
+              _processScanResults(results);
               scanCompleted = true;
+              _scanStatus = 'Found ${_networks.length} networks';
             } else {
-              _scanStatus = 'No results yet... Attempt $attempts/$maxAttempts';
+              _scanStatus = 'No results yet, waiting... Attempt $attempts/$maxAttempts';
             }
           } catch (e) {
-            _scanStatus = 'Error getting results: $e - Attempt $attempts/$maxAttempts';
+            _scanStatus = 'Error getting results: $e\nAttempt $attempts/$maxAttempts';
           }
         }
         
         if (!scanCompleted) {
-          _scanStatus = 'Scan failed after $maxAttempts attempts.\nPlease ensure:\n• WiFi is enabled\n• Location Services are enabled\n• Location permission is granted to this app';
-          _isScanning = false;
+          _scanStatus = 'Scan timeout - No networks found after $maxAttempts attempts';
         }
-      } else if (canStartScan != CanStartScan.yes) {
-        _scanStatus = 'Cannot start WiFi scan.\nPlease:\n• Enable WiFi in device settings\n• Enable Location Services\n• Grant location permission to this app';
-        _isScanning = false;
-      } else if (canGetResults != CanGetScannedResults.yes) {
-        _scanStatus = 'Cannot read scan results.\nPlease:\n• Enable WiFi\n• Enable Location Services\n• Grant location permission to this app';
-        _isScanning = false;
       } else {
-        _scanStatus = 'WiFi scanning not available.\nPlease:\n• Enable WiFi\n• Enable Location Services\n• Grant location permission to this app\n\nStatus: Start=$canStartScan, Get=$canGetResults';
-        _isScanning = false;
+        _scanStatus = 'Cannot scan: Start=$canStartScan, Get=$canGetResults\nPlease enable WiFi and Location Services';
       }
     } catch (e) {
-      _scanStatus = 'Scan error: $e\nPlease:\n• Enable WiFi\n• Enable Location Services\n• Grant location permission to this app';
+      _scanStatus = 'Scan failed: $e\nPlease check WiFi and Location Services';
+    } finally {
       _isScanning = false;
     }
   }
 
-  /// Process scan results
-  void _processResults(List<WiFiAccessPoint> results) {
-    // Sort by signal strength (higher is stronger)
-    results.sort((a, b) => b.level.compareTo(a.level));
-    
-    // Convert to WiFiNetwork models and identify connected network
-    final connectedNetwork = _identifyConnectedNetwork(results);
-    
-    // Create WiFiNetwork objects
-    _networks = results.map((ap) {
-      final isConnected = connectedNetwork?.ssid == ap.ssid;
-      return WiFiNetwork.fromAccessPoint(ap, isConnected: isConnected);
-    }).toList();
-    
-    _isScanning = false;
-    _scanStatus = 'Found ${_networks.length} networks';
-  }
+  // ==================== RESULT PROCESSING ====================
 
-  /// Identify which network the device is connected to
-  WiFiAccessPoint? _identifyConnectedNetwork(List<WiFiAccessPoint> results) {
-    // This is a placeholder - in a real app, check actual connection
-    // For now, simulate being connected to the first network
-    if (results.isNotEmpty) {
-      return results.first;
+  /// Process the raw scan results and convert them to WiFiNetwork objects
+  /// This method handles the conversion from WiFiAccessPoint to our custom model
+  void _processScanResults(List<WiFiAccessPoint> results) {
+    _networks.clear();
+    
+    for (final result in results) {
+      try {
+        // Create a WiFiNetwork object from each scan result
+        final network = WiFiNetwork(
+          ssid: result.ssid ?? 'Hidden Network',
+          level: result.level ?? -100,
+          frequency: result.frequency ?? 0,
+          capabilities: result.capabilities ?? '',
+        );
+        
+        _networks.add(network);
+      } catch (e) {
+        // Skip any malformed results
+        continue;
+      }
     }
-    return null;
+    
+    // Sort networks by signal strength (strongest first)
+    _networks.sort((a, b) => b.level.compareTo(a.level));
+    
+    // Identify which network we're currently connected to
+    _identifyConnectedNetwork();
   }
 
-  /// Get connected network
-  WiFiNetwork? get connectedNetwork {
-    try {
-      return _networks.firstWhere((n) => n.isConnected);
-    } catch (e) {
-      return null;
+  /// Try to identify which network the device is currently connected to
+  /// This helps users see their current connection status
+  void _identifyConnectedNetwork() {
+    // For now, we'll simulate finding the connected network
+    // In a real implementation, you would check the current WiFi connection
+    if (_networks.isNotEmpty) {
+      // Mark the first network as connected for demonstration
+      // In reality, you'd check against the actual connected network
+      // Note: Since isConnected is final, we can't modify it after creation
+      // This is a limitation of the current model design
     }
   }
 
-  /// Get all networks (no separation needed)
-  List<WiFiNetwork> get allNetworks => _networks;
+  // ==================== UTILITY METHODS ====================
 
-  /// Dispose resources
-  void dispose() {
+  /// Stop the permission monitoring timer
+  /// Call this when the controller is no longer needed
+  void stopPermissionMonitoring() {
     _scanTimer?.cancel();
+    _scanTimer = null;
   }
 
-  /// Request permissions (placeholder for now)
-  Future<void> requestPermissions() async {
-    _scanStatus = 'To scan WiFi networks, please:\n• Grant location permission when prompted\n• Enable Location Services in device settings\n• Ensure WiFi is enabled';
-    // In a real app, you would request permissions here
-    // For now, just recheck what we have
-    await Future.delayed(const Duration(seconds: 2));
-    await checkPermissions();
+  /// Clear all scanned networks
+  /// Useful for refreshing the scan results
+  void clearNetworks() {
+    _networks.clear();
+    _scanStatus = 'Ready to scan';
   }
 
-  /// Get permission status for debugging
-  String getPermissionStatus() {
-    return 'Scan Status: $_scanStatus';
+  /// Get the currently connected network (if any)
+  WiFiNetwork? getConnectedNetwork() {
+    try {
+      return _networks.firstWhere((network) => network.isConnected);
+    } catch (e) {
+      return null; // No connected network found
+    }
   }
+
+  /// Check if we have any networks scanned
+  bool get hasNetworks => _networks.isNotEmpty;
+
+  /// Get the number of networks found
+  int get networkCount => _networks.length;
 }

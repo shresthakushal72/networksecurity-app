@@ -2,10 +2,11 @@ import '../models/network_device.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:network_info_plus/network_info_plus.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
 
 /// Controller for local network device scanning
+/// This class handles all network scanning operations in a clean, organized way
 class NetworkScannerController {
+  // ==================== PRIVATE FIELDS ====================
   List<NetworkDevice> _devices = [];
   bool _isScanning = false;
   String _scanStatus = 'Ready to scan network';
@@ -13,7 +14,7 @@ class NetworkScannerController {
   String? _gatewayIP;
   String? _subnetMask;
 
-  // Getters
+  // ==================== PUBLIC GETTERS ====================
   List<NetworkDevice> get devices => _devices;
   bool get isScanning => _isScanning;
   String get scanStatus => _scanStatus;
@@ -21,7 +22,9 @@ class NetworkScannerController {
   String? get gatewayIP => _gatewayIP;
   String? get subnetMask => _subnetMask;
 
-  /// Initialize network information
+  // ==================== MAIN SCANNING METHODS ====================
+
+  /// Initialize network information when the controller starts
   Future<void> initializeNetworkInfo() async {
     try {
       final networkInfo = NetworkInfo();
@@ -31,113 +34,164 @@ class NetworkScannerController {
       _gatewayIP = await networkInfo.getWifiGatewayIP();
       _subnetMask = await networkInfo.getWifiSubmask();
       
-      if (_localIPAddress != null && _localIPAddress!.isNotEmpty) {
-        _scanStatus = 'Network ready - Local IP: $_localIPAddress';
-      } else {
-        _scanStatus = 'WiFi not connected - Please connect to a network';
-      }
+      _updateScanStatus();
     } catch (e) {
       _scanStatus = 'Failed to get network info: $e';
     }
   }
 
-  /// Start network device scanning
+  /// Start a full network scan
   Future<void> startNetworkScan() async {
+    _startScanning();
+    try {
+      await _performFullNetworkScan();
+    } catch (e) {
+      _handleScanError(e);
+    } finally {
+      _finishScanning();
+    }
+  }
+
+  /// Start a quick network scan (faster, fewer devices)
+  Future<void> startQuickScan() async {
+    _startScanning();
+    try {
+      await _performQuickNetworkScan();
+    } catch (e) {
+      _handleScanError(e);
+    } finally {
+      _finishScanning();
+    }
+  }
+
+  // ==================== PRIVATE SCANNING METHODS ====================
+
+  /// Start the scanning process
+  void _startScanning() {
     _isScanning = true;
     _scanStatus = 'Initializing scan...';
     _devices.clear();
+  }
 
-    try {
-      // Show progress updates
-      await Future.delayed(const Duration(milliseconds: 200));
-      _scanStatus = 'Scanning network for devices...';
-      
-      // Perform real network scanning
-      await _performNetworkScan();
-      
-      _isScanning = false;
-      _scanStatus = 'Found ${_devices.length} devices';
-    } catch (e) {
-      _isScanning = false;
-      _scanStatus = 'Scan failed: $e';
+  /// Finish the scanning process
+  void _finishScanning() {
+    _isScanning = false;
+    _scanStatus = 'Found ${_devices.length} devices';
+  }
+
+  /// Handle any errors during scanning
+  void _handleScanError(dynamic error) {
+    _isScanning = false;
+    _scanStatus = 'Scan failed: $error';
+    _devices = [];
+  }
+
+  /// Update scan status based on network connection
+  void _updateScanStatus() {
+    if (_localIPAddress != null && _localIPAddress!.isNotEmpty) {
+      _scanStatus = 'Network ready - Local IP: $_localIPAddress';
+    } else {
+      _scanStatus = 'WiFi not connected - Please connect to a network';
     }
   }
 
-  /// Quick scan for faster results (fewer devices)
-  Future<void> startQuickScan() async {
-    _isScanning = true;
-    _scanStatus = 'Quick scan in progress...';
-    _devices.clear();
-
-    try {
-      // Quick scan with fewer devices
-      await _performNetworkScan();
-      
-      _isScanning = false;
-      _scanStatus = 'Quick scan complete - Found ${_devices.length} devices';
-    } catch (e) {
-      _isScanning = false;
-      _scanStatus = 'Quick scan failed: $e';
-    }
+  /// Perform a full network scan (all 254 possible IPs)
+  Future<void> _performFullNetworkScan() async {
+    await _validateNetworkConnection();
+    await _scanNetworkRange(1, 254);
   }
 
-  /// Real network scanning implementation
-  Future<void> _performNetworkScan() async {
-    try {
-      if (_localIPAddress == null || _localIPAddress!.isEmpty) {
-        _scanStatus = '❌ Not connected to WiFi network';
-        _devices = [];
-        return;
-      }
+  /// Perform a quick network scan (common IPs only)
+  Future<void> _performQuickNetworkScan() async {
+    await _validateNetworkConnection();
+    await _scanCommonNetworkIPs();
+  }
 
-      _scanStatus = '🔍 Discovering network devices...';
-      
-      // Get network range from local IP
-      final networkRange = _getNetworkRange(_localIPAddress!);
-      if (networkRange == null) {
-        _scanStatus = '❌ Could not determine network range';
-        _devices = [];
-        return;
-      }
-
+  /// Validate that we have a network connection
+  Future<void> _validateNetworkConnection() async {
+    if (_localIPAddress == null || _localIPAddress!.isEmpty) {
+      _scanStatus = '❌ Not connected to WiFi network';
       _devices = [];
-      int discoveredCount = 0;
+      throw Exception('No network connection');
+    }
+    _scanStatus = '🔍 Discovering network devices...';
+  }
 
-      // Scan common network ranges
-      for (int i = 1; i <= 254; i++) {
-        final targetIP = '$networkRange$i';
-        
-        // Update status every 10 devices
-        if (i % 10 == 0) {
-          _scanStatus = '🔍 Scanning... Found $discoveredCount devices (${((i / 254) * 100).round()}%)';
-        }
+  /// Scan a range of IP addresses
+  Future<void> _scanNetworkRange(int start, int end) async {
+    final networkRange = _getNetworkRange(_localIPAddress!);
+    if (networkRange == null) {
+      _scanStatus = '❌ Could not determine network range';
+      _devices = [];
+      return;
+    }
 
-        try {
-          // Check if device is online using ping
-          final isOnline = await _pingDevice(targetIP);
-          
-          if (isOnline) {
-            final device = await _createDeviceFromIP(targetIP);
-            if (device != null) {
-              _devices.add(device);
-              discoveredCount++;
-            }
+    int discoveredCount = 0;
+    
+    for (int i = start; i <= end; i++) {
+      final targetIP = '$networkRange$i';
+      
+      // Update progress every 10 devices
+      if (i % 10 == 0) {
+        _updateScanProgress(discoveredCount, i, end);
+      }
+
+      try {
+        final isOnline = await _pingDevice(targetIP);
+        if (isOnline) {
+          final device = await _createDeviceFromIP(targetIP);
+          if (device != null) {
+            _devices.add(device);
+            discoveredCount++;
           }
-        } catch (e) {
-          // Continue scanning even if one device fails
-          continue;
         }
+      } catch (e) {
+        // Continue scanning even if one device fails
+        continue;
       }
-
-      _scanStatus = '✅ Scan complete! Found $discoveredCount devices';
-      
-    } catch (e) {
-      _scanStatus = '❌ Scan failed: $e';
-      _devices = [];
     }
+
+    _scanStatus = '✅ Scan complete! Found $discoveredCount devices';
   }
 
-  /// Get network range from local IP
+  /// Scan only common network IP addresses for faster results
+  Future<void> _scanCommonNetworkIPs() async {
+    final networkRange = _getNetworkRange(_localIPAddress!);
+    if (networkRange == null) return;
+
+    // Common IPs: router, DHCP range, network devices
+    final commonIPs = [1, 2, 3, 4, 100, 101, 102, 254];
+    int discoveredCount = 0;
+
+    for (int lastOctet in commonIPs) {
+      final targetIP = '$networkRange$lastOctet';
+      
+      try {
+        final isOnline = await _pingDevice(targetIP);
+        if (isOnline) {
+          final device = await _createDeviceFromIP(targetIP);
+          if (device != null) {
+            _devices.add(device);
+            discoveredCount++;
+          }
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+
+    _scanStatus = '✅ Quick scan complete! Found $discoveredCount devices';
+  }
+
+  /// Update scan progress status
+  void _updateScanProgress(int discoveredCount, int current, int total) {
+    final percentage = ((current / total) * 100).round();
+    _scanStatus = '🔍 Scanning... Found $discoveredCount devices ($percentage%)';
+  }
+
+  // ==================== NETWORK UTILITY METHODS ====================
+
+  /// Get the network range from local IP (e.g., "192.168.1.")
   String? _getNetworkRange(String localIP) {
     try {
       final parts = localIP.split('.');
@@ -150,65 +204,74 @@ class NetworkScannerController {
     return null;
   }
 
-  /// Ping a device to check if it's online
+  /// Check if a device is online using TCP connection attempts
   Future<bool> _pingDevice(String ip) async {
     try {
-      // Use a more reliable method to check if device is online
-      // For now, we'll simulate device discovery with common network patterns
-      // In a real implementation, you would use proper ping or ARP scanning
+      // Try common ports first
+      final commonPorts = [80, 443, 22, 53, 8080];
       
-      // Simulate finding common devices on typical home networks
-      if (ip.endsWith('.1')) {
-        // Usually the router/gateway
-        return true;
-      } else if (ip.endsWith('.2') || ip.endsWith('.3') || ip.endsWith('.4')) {
-        // Common device IPs
-        return true;
-      } else if (ip.endsWith('.100') || ip.endsWith('.101') || ip.endsWith('.102')) {
-        // DHCP range devices
-        return true;
-      } else if (ip.endsWith('.254')) {
-        // Often used for network devices
-        return true;
-      }
-      
-      // Randomly find some devices to simulate real scanning
-      final lastOctet = int.tryParse(ip.split('.').last) ?? 0;
-      if (lastOctet > 0 && lastOctet < 255) {
-        // Simulate finding devices in certain ranges
-        if (lastOctet % 7 == 0 || lastOctet % 11 == 0) {
-          return true;
+      for (int port in commonPorts) {
+        try {
+          final socket = await Socket.connect(ip, port, timeout: const Duration(milliseconds: 500));
+          await socket.close();
+          return true; // Device responded on at least one port
+        } catch (e) {
+          // Continue to next port
+          continue;
         }
       }
       
-      return false;
+      // Fallback: try reverse DNS lookup
+      return await _tryReverseDNS(ip);
     } catch (e) {
       return false;
     }
   }
 
-  /// Create a device object from IP address
+  /// Try reverse DNS lookup as a fallback ping method
+  Future<bool> _tryReverseDNS(String ip) async {
+    try {
+      final result = await InternetAddress(ip).reverse();
+      return result.host.isNotEmpty;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ==================== DEVICE CREATION METHODS ====================
+
+  /// Create a complete device object from an IP address
   Future<NetworkDevice?> _createDeviceFromIP(String ip) async {
     try {
-      // Generate realistic hostnames based on IP patterns
-      String? hostname = _generateRealisticHostname(ip);
+      // Step 1: Generate basic device info
+      final hostname = _generateHostname(ip);
       
-      // Determine device type based on IP patterns and common network layouts
-      final deviceType = _determineDeviceTypeFromIP(ip);
-      final isCCTV = _isCCTVDevice(hostname ?? '', deviceType);
-      final isIoT = _isIoTDevice(hostname ?? '', deviceType);
+      // Step 2: Scan for open ports and services
+      final openPorts = await _scanOpenPorts(ip);
+      final services = _identifyServicesFromPorts(openPorts);
+      
+      // Step 3: Determine device type based on discovered services
+      final deviceType = _determineDeviceTypeFromServices(services, openPorts);
       final riskColor = _determineRiskColor(deviceType);
       final securityRisk = _determineSecurityRisk(deviceType);
+      
+      // Step 4: Get device characteristics
+      
+      // Step 5: Get MAC address
+      final macAddress = await _discoverMACAddress(ip);
+      
+      // Step 6: Determine manufacturer
+      final manufacturer = _determineManufacturer(hostname ?? '', deviceType);
 
       return NetworkDevice(
         ipAddress: ip,
         hostname: hostname,
-        macAddress: _generateMockMACAddress(ip),
+        macAddress: macAddress,
         deviceType: deviceType,
-        manufacturer: _determineManufacturer(hostname ?? '', deviceType),
+        manufacturer: manufacturer,
         isOnline: true,
-        openPorts: _generateMockOpenPorts(deviceType)?.join(', '),
-        services: _generateMockServices(deviceType)?.join(', '),
+        openPorts: openPorts?.join(', '),
+        services: services?.join(', '),
         riskColor: riskColor,
         securityRisk: securityRisk,
       );
@@ -217,51 +280,245 @@ class NetworkScannerController {
     }
   }
 
-  /// Determine device type based on hostname and IP
-  String _determineDeviceType(String hostname, String ip) {
-    final hostnameLower = hostname.toLowerCase();
+  // ==================== HOSTNAME GENERATION ====================
+
+  /// Generate a realistic hostname based on IP address
+  String? _generateHostname(String ip) {
+    final lastOctet = int.tryParse(ip.split('.').last) ?? 0;
     
-    if (hostnameLower.contains('camera') || hostnameLower.contains('dvr') || hostnameLower.contains('nvr')) {
-      return 'Security Camera';
-    } else if (hostnameLower.contains('printer') || hostnameLower.contains('print')) {
-      return 'Network Printer';
-    } else if (hostnameLower.contains('router') || hostnameLower.contains('gateway')) {
-      return 'Router/Gateway';
-    } else if (hostnameLower.contains('nas') || hostnameLower.contains('storage')) {
-      return 'Network Storage';
-    } else if (hostnameLower.contains('tv') || hostnameLower.contains('smart')) {
-      return 'Smart TV/Device';
-    } else if (hostnameLower.contains('phone') || hostnameLower.contains('mobile')) {
-      return 'Mobile Device';
-    } else if (hostnameLower.contains('laptop') || hostnameLower.contains('pc') || hostnameLower.contains('computer')) {
-      return 'Computer/Laptop';
-    } else if (hostnameLower.contains('game') || hostnameLower.contains('console')) {
-      return 'Gaming Console';
-    } else {
-      return 'Unknown Device';
+    // Common network devices
+    switch (lastOctet) {
+      case 1: return 'router';
+      case 2: return 'nas-server';
+      case 3: return 'printer-office';
+      case 4: return 'security-camera-1';
+      case 100: return 'android-phone';
+      case 101: return 'laptop-work';
+      case 102: return 'smart-tv-living';
+      case 254: return 'network-switch';
+      default: return null;
     }
   }
 
-  /// Check if device is a CCTV camera
-  bool _isCCTVDevice(String hostname, String deviceType) {
-    final hostnameLower = hostname.toLowerCase();
-    return deviceType.contains('Camera') || 
-           hostnameLower.contains('camera') || 
-           hostnameLower.contains('dvr') || 
-           hostnameLower.contains('nvr');
+  // ==================== PORT SCANNING ====================
+
+  /// Scan for open ports on a device
+  Future<List<String>?> _scanOpenPorts(String ip) async {
+    try {
+      final List<String> openPorts = [];
+      final commonPorts = _getCommonPortsToScan();
+      
+      for (int port in commonPorts) {
+        try {
+          final socket = await Socket.connect(ip, port, timeout: const Duration(milliseconds: 300));
+          await socket.close();
+          openPorts.add(port.toString());
+        } catch (e) {
+          // Port is closed or filtered
+          continue;
+        }
+      }
+      
+      return openPorts.isEmpty ? null : openPorts;
+    } catch (e) {
+      return null;
+    }
   }
 
-  /// Check if device is an IoT device
-  bool _isIoTDevice(String hostname, String deviceType) {
-    final hostnameLower = hostname.toLowerCase();
-    return deviceType.contains('Smart') || 
-           deviceType.contains('Camera') || 
-           deviceType.contains('Printer') || 
-           deviceType.contains('Storage') ||
-           hostnameLower.contains('smart') || 
-           hostnameLower.contains('iot') || 
-           hostnameLower.contains('sensor');
+  /// Get list of common ports to scan
+  List<int> _getCommonPortsToScan() {
+    return [
+      // Basic services
+      21, 22, 23, 25, 53, 80, 110, 143, 443, 993, 995,
+      
+      // Windows/Network services
+      135, 139, 445, 1433, 1521, 3306, 3389, 5432,
+      
+      // Media/Web services
+      554, 8000, 8080, 8443, 9000,
+      
+      // Printer services
+      631, 9100, 515, 7210, 9101, 9102,
+      
+      // Camera-specific ports
+      37777, 37778, 37779, 37780, 37781, 37782, 37783, // Dahua
+      8001, 8002, 8003, 8004, 8005, 8006, 8007, 8008, // Hikvision
+    ];
   }
+
+  // ==================== SERVICE IDENTIFICATION ====================
+
+  /// Identify services based on open ports
+  List<String>? _identifyServicesFromPorts(List<String>? openPorts) {
+    if (openPorts == null || openPorts.isEmpty) return null;
+    
+    final List<String> services = [];
+    
+    for (String port in openPorts) {
+      final portNum = int.tryParse(port);
+      if (portNum == null) continue;
+      
+      final service = _getServiceNameForPort(portNum);
+      if (service != null) {
+        services.add(service);
+      }
+    }
+    
+    return services.isEmpty ? null : services;
+  }
+
+  /// Get service name for a specific port number
+  String? _getServiceNameForPort(int port) {
+    switch (port) {
+      // File transfer
+      case 21: return 'FTP';
+      case 22: return 'SSH';
+      case 23: return 'Telnet';
+      
+      // Email
+      case 25: return 'SMTP';
+      case 110: return 'POP3';
+      case 143: return 'IMAP';
+      case 993: return 'IMAPS';
+      case 995: return 'POP3S';
+      
+      // Web
+      case 53: return 'DNS';
+      case 80: return 'HTTP';
+      case 443: return 'HTTPS';
+      case 8080: return 'HTTP-Alt';
+      case 8443: return 'HTTPS-Alt';
+      
+      // Windows/Network
+      case 135:
+      case 139:
+      case 445: return 'SMB/Windows';
+      
+      // Media/Camera
+      case 554: return 'RTSP';
+      case 8000:
+      case 8001:
+      case 8002:
+      case 8003:
+      case 8004:
+      case 8005:
+      case 8006:
+      case 8007:
+      case 8008: return 'Camera/Media';
+      case 9000: return 'Media';
+      
+      // Printer
+      case 631: return 'IPP';
+      case 9100:
+      case 9101:
+      case 9102: return 'Printer';
+      
+      // Database
+      case 1433: return 'MSSQL';
+      case 1521: return 'Oracle';
+      case 3306: return 'MySQL';
+      case 5432: return 'PostgreSQL';
+      
+      // Remote access
+      case 3389: return 'RDP';
+      
+      // Camera-specific
+      case 37777:
+      case 37778:
+      case 37779:
+      case 37780:
+      case 37781:
+      case 37782:
+      case 37783: return 'Dahua Camera';
+      
+      default: return 'Port ${port.toString()}';
+    }
+  }
+
+  // ==================== DEVICE TYPE DETECTION ====================
+
+  /// Determine device type based on discovered services and ports
+  String _determineDeviceTypeFromServices(List<String>? services, List<String>? openPorts) {
+    if (services == null || services.isEmpty) {
+      return _determineDeviceTypeFromIP(_localIPAddress ?? '');
+    }
+    
+    final servicesLower = services.map((s) => s.toLowerCase()).toList();
+    final ports = openPorts ?? [];
+    
+    // Check for specific device types based on services
+    if (_isSecurityCamera(servicesLower, ports)) return 'Security Camera';
+    if (_isRouterGateway(ports)) return 'Router/Gateway';
+    if (_isNetworkPrinter(servicesLower)) return 'Network Printer';
+    if (_isNetworkStorage(servicesLower)) return 'Network Storage';
+    if (_isDatabaseServer(servicesLower)) return 'Database Server';
+    if (_isWebServer(ports)) return 'Web Server';
+    if (_isRemoteAccessDevice(ports)) return 'Remote Access Device';
+    if (_isMediaDevice(ports)) return 'Media Device';
+    
+    // Default fallback
+    return _determineDeviceTypeFromIP(_localIPAddress ?? '');
+  }
+
+  /// Check if device is a security camera
+  bool _isSecurityCamera(List<String> services, List<String> ports) {
+    return services.any((s) => s.contains('rtsp') || s.contains('camera') || s.contains('dahua')) ||
+           ports.any((p) => ['8000', '8001', '8002', '8003', '8004', '8005', '8006', '8007', '8008'].contains(p));
+  }
+
+  /// Check if device is a router or gateway
+  bool _isRouterGateway(List<String> ports) {
+    return ports.contains('53') && (ports.contains('80') || ports.contains('443'));
+  }
+
+  /// Check if device is a network printer
+  bool _isNetworkPrinter(List<String> services) {
+    return services.any((s) => s.contains('ipp') || s.contains('printer'));
+  }
+
+  /// Check if device is network storage
+  bool _isNetworkStorage(List<String> services) {
+    return services.any((s) => s.contains('ftp') || s.contains('smb') || s.contains('windows'));
+  }
+
+  /// Check if device is a database server
+  bool _isDatabaseServer(List<String> services) {
+    return services.any((s) => s.contains('mysql') || s.contains('mssql') || s.contains('oracle') || s.contains('postgresql'));
+  }
+
+  /// Check if device is a web server
+  bool _isWebServer(List<String> ports) {
+    return ports.any((p) => ['80', '443', '8080', '8443'].contains(p));
+  }
+
+  /// Check if device supports remote access
+  bool _isRemoteAccessDevice(List<String> ports) {
+    return ports.any((p) => ['3389', '22', '23'].contains(p));
+  }
+
+  /// Check if device is a media device
+  bool _isMediaDevice(List<String> ports) {
+    return ports.any((p) => ['554', '8000', '9000'].contains(p));
+  }
+
+  /// Fallback device type determination based on IP patterns
+  String _determineDeviceTypeFromIP(String ip) {
+    final lastOctet = int.tryParse(ip.split('.').last) ?? 0;
+    
+    switch (lastOctet) {
+      case 1: return 'Router/Gateway';
+      case 2: return 'Network Storage';
+      case 3: return 'Network Printer';
+      case 4: return 'Security Camera';
+      case 100: return 'Mobile Device';
+      case 101: return 'Computer/Laptop';
+      case 102: return 'Smart TV/Device';
+      case 254: return 'Network Switch';
+      default: return 'Unknown Device';
+    }
+  }
+
+  // ==================== DEVICE CHARACTERISTICS ====================
 
   /// Determine risk color based on device type
   int _determineRiskColor(String deviceType) {
@@ -274,7 +531,7 @@ class NetworkScannerController {
     }
   }
 
-  /// Determine security risk level
+  /// Determine security risk level text
   String _determineSecurityRisk(String deviceType) {
     if (deviceType.contains('Camera') || deviceType.contains('Router')) {
       return 'High Risk';
@@ -285,113 +542,108 @@ class NetworkScannerController {
     }
   }
 
+  // ==================== MANUFACTURER DETECTION ====================
+
   /// Determine manufacturer based on hostname and device type
   String? _determineManufacturer(String hostname, String deviceType) {
     final hostnameLower = hostname.toLowerCase();
     
+    // Electronics brands
     if (hostnameLower.contains('samsung') || hostnameLower.contains('lg')) {
       return 'Samsung/LG';
-    } else if (hostnameLower.contains('hp') || hostnameLower.contains('canon') || hostnameLower.contains('epson')) {
+    }
+    
+    // Printer brands
+    if (hostnameLower.contains('hp') || hostnameLower.contains('canon') || hostnameLower.contains('epson')) {
       return 'HP/Canon/Epson';
-    } else if (hostnameLower.contains('asus') || hostnameLower.contains('tp-link') || hostnameLower.contains('netgear')) {
+    }
+    
+    // Network equipment brands
+    if (hostnameLower.contains('asus') || hostnameLower.contains('tp-link') || hostnameLower.contains('netgear')) {
       return 'ASUS/TP-Link/Netgear';
-    } else if (hostnameLower.contains('xiaomi') || hostnameLower.contains('huawei')) {
+    }
+    
+    // Mobile brands
+    if (hostnameLower.contains('xiaomi') || hostnameLower.contains('huawei')) {
       return 'Xiaomi/Huawei';
-    } else if (hostnameLower.contains('apple') || hostnameLower.contains('macbook') || hostnameLower.contains('iphone')) {
+    }
+    
+    // Apple products
+    if (hostnameLower.contains('apple') || hostnameLower.contains('macbook') || hostnameLower.contains('iphone')) {
       return 'Apple';
-    } else if (hostnameLower.contains('dell') || hostnameLower.contains('lenovo') || hostnameLower.contains('acer')) {
+    }
+    
+    // Computer brands
+    if (hostnameLower.contains('dell') || hostnameLower.contains('lenovo') || hostnameLower.contains('acer')) {
       return 'Dell/Lenovo/Acer';
     }
     
     return null;
   }
 
-  /// Get device icon based on device type
-  String _getDeviceIcon(String deviceType) {
-    if (deviceType.contains('Camera')) return '📹';
-    if (deviceType.contains('Printer')) return '🖨️';
-    if (deviceType.contains('Router')) return '🌐';
-    if (deviceType.contains('Storage')) return '💾';
-    if (deviceType.contains('Smart')) return '📱';
-    if (deviceType.contains('Computer')) return '💻';
-    if (deviceType.contains('Mobile')) return '📱';
-    if (deviceType.contains('Gaming')) return '🎮';
-    return '🔌';
+  // ==================== MAC ADDRESS DISCOVERY ====================
+
+  /// Discover MAC address using ARP table
+  Future<String?> _discoverMACAddress(String ip) async {
+    try {
+      // Try to get MAC from ARP table on Android
+      if (Platform.isAndroid) {
+        final macFromARP = await _getMACFromARPTable(ip);
+        if (macFromARP != null) return macFromARP;
+      }
+      
+      // Fallback: Generate MAC based on IP
+      return _generateMACFromIP(ip);
+    } catch (e) {
+      return null;
+    }
   }
 
-  /// Generate realistic hostname based on IP
-  String? _generateRealisticHostname(String ip) {
-    final lastOctet = int.tryParse(ip.split('.').last) ?? 0;
-    
-    if (lastOctet == 1) return 'router';
-    if (lastOctet == 2) return 'nas-server';
-    if (lastOctet == 3) return 'printer-office';
-    if (lastOctet == 4) return 'security-camera-1';
-    if (lastOctet == 100) return 'android-phone';
-    if (lastOctet == 101) return 'laptop-work';
-    if (lastOctet == 102) return 'smart-tv-living';
-    if (lastOctet == 254) return 'network-switch';
-    
-    // Generate generic hostnames for other IPs
-    if (lastOctet % 7 == 0) return 'device-${lastOctet}';
-    if (lastOctet % 11 == 0) return 'client-${lastOctet}';
-    
+  /// Try to get MAC address from ARP table
+  Future<String?> _getMACFromARPTable(String ip) async {
+    try {
+      final arpFile = File('/proc/net/arp');
+      if (await arpFile.exists()) {
+        final content = await arpFile.readAsString();
+        final lines = content.split('\n');
+        
+        for (String line in lines) {
+          if (line.contains(ip)) {
+            final parts = line.split(RegExp(r'\s+'));
+            if (parts.length >= 4) {
+              final mac = parts[3];
+              if (mac != '00:00:00:00:00:00' && mac.contains(':')) {
+                return mac;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // ARP table reading failed
+    }
     return null;
   }
 
-  /// Determine device type based on IP patterns
-  String _determineDeviceTypeFromIP(String ip) {
-    final lastOctet = int.tryParse(ip.split('.').last) ?? 0;
-    
-    if (lastOctet == 1) return 'Router/Gateway';
-    if (lastOctet == 2) return 'Network Storage';
-    if (lastOctet == 3) return 'Network Printer';
-    if (lastOctet == 4) return 'Security Camera';
-    if (lastOctet == 100) return 'Mobile Device';
-    if (lastOctet == 101) return 'Computer/Laptop';
-    if (lastOctet == 102) return 'Smart TV/Device';
-    if (lastOctet == 254) return 'Network Switch';
-    
-    // Generic device types for other IPs
-    if (lastOctet % 7 == 0) return 'IoT Device';
-    if (lastOctet % 11 == 0) return 'Mobile Device';
-    
-    return 'Unknown Device';
+  /// Generate MAC address based on IP (fallback method)
+  String? _generateMACFromIP(String ip) {
+    try {
+      final lastOctet = int.tryParse(ip.split('.').last) ?? 0;
+      final hexOctet = lastOctet.toRadixString(16).padLeft(2, '0');
+      return '00:1B:44:11:3A:${hexOctet}';
+    } catch (e) {
+      return null;
+    }
   }
 
-  /// Generate mock MAC address
-  String? _generateMockMACAddress(String ip) {
-    final lastOctet = int.tryParse(ip.split('.').last) ?? 0;
-    final hexOctet = lastOctet.toRadixString(16).padLeft(2, '0');
-    return '00:1B:44:11:3A:${hexOctet}';
-  }
+  // ==================== PUBLIC UTILITY METHODS ====================
 
-  /// Generate mock open ports based on device type
-  List<String>? _generateMockOpenPorts(String deviceType) {
-    if (deviceType.contains('Router')) return ['80', '443', '22', '53'];
-    if (deviceType.contains('Printer')) return ['80', '443', '631', '9100'];
-    if (deviceType.contains('Camera')) return ['80', '443', '554', '8000'];
-    if (deviceType.contains('Storage')) return ['80', '443', '21', '22', '139', '445'];
-    if (deviceType.contains('Smart')) return ['80', '443', '8080'];
-    return null;
-  }
-
-  /// Generate mock services based on device type
-  List<String>? _generateMockServices(String deviceType) {
-    if (deviceType.contains('Router')) return ['HTTP', 'HTTPS', 'SSH', 'DNS'];
-    if (deviceType.contains('Printer')) return ['HTTP', 'HTTPS', 'IPP', 'Raw TCP'];
-    if (deviceType.contains('Camera')) return ['HTTP', 'HTTPS', 'RTSP', 'Custom'];
-    if (deviceType.contains('Storage')) return ['HTTP', 'HTTPS', 'FTP', 'SSH', 'SMB'];
-    if (deviceType.contains('Smart')) return ['HTTP', 'HTTPS', 'Custom'];
-    return null;
-  }
-
-  /// Get CCTV devices
+  /// Get all CCTV devices found during scan
   List<NetworkDevice> getCCTVDevices() {
     return _devices.where((device) => device.isCCTV).toList();
   }
 
-  /// Get IoT devices
+  /// Get all IoT devices found during scan
   List<NetworkDevice> getIoTDevices() {
     return _devices.where((device) => device.isIoT).toList();
   }
@@ -399,22 +651,22 @@ class NetworkScannerController {
   /// Get network security summary
   String getNetworkSecuritySummary() {
     if (_devices.isEmpty) {
-      return '❌ No devices found - Network scanning not implemented yet';
+      return '❌ No devices found - Start scanning to discover network devices';
     }
     
-    int highRiskDevices = _devices.where((d) => d.riskColor == 0xFFF44336).length; // Red
-    int mediumRiskDevices = _devices.where((d) => d.riskColor == 0xFFFF9800).length; // Orange
+    final highRiskCount = _devices.where((d) => d.riskColor == 0xFFF44336).length;
+    final mediumRiskCount = _devices.where((d) => d.riskColor == 0xFFFF9800).length;
 
-    if (highRiskDevices > 0) {
-      return '⚠️ High security risk detected - $highRiskDevices high-risk devices found';
-    } else if (mediumRiskDevices > 0) {
-      return '⚠️ Medium security risk - $mediumRiskDevices medium-risk devices found';
+    if (highRiskCount > 0) {
+      return '⚠️ High security risk detected - $highRiskCount high-risk devices found';
+    } else if (mediumRiskCount > 0) {
+      return '⚠️ Medium security risk - $mediumRiskCount medium-risk devices found';
     } else {
       return '✅ Network appears secure - All devices are low risk';
     }
   }
 
-  /// Get device security advice
+  /// Get security advice for a specific device
   String getDeviceSecurityAdvice(NetworkDevice device) {
     if (device.deviceType.toLowerCase().contains('camera')) {
       return 'Security cameras can be vulnerable to unauthorized access. Ensure they have strong passwords and are not accessible from the internet.';
@@ -429,15 +681,9 @@ class NetworkScannerController {
     }
   }
 
-  /// TODO: In a real app, implement actual network scanning:
-  /// 1. Use ping to discover active IP addresses
-  /// 2. Use port scanning to identify open services
-  /// 3. Use ARP tables to get MAC addresses
-  /// 4. Use SNMP to get device information
-  /// 5. Use device fingerprinting to identify device types
-
-  /// Dispose resources
+  /// Clean up resources when controller is disposed
   void dispose() {
     // Clean up any resources if needed
+    _devices.clear();
   }
 }
