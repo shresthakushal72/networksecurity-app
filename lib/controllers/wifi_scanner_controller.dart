@@ -16,11 +16,23 @@ class WiFiScannerController {
 
   /// Check WiFi scan permissions
   Future<void> checkPermissions() async {
-    final canGetScannedResults = await WiFiScan.instance.canGetScannedResults();
-    if (canGetScannedResults == CanGetScannedResults.yes) {
-      _scanStatus = 'Ready to scan';
-    } else {
-      _scanStatus = 'Permission denied';
+    try {
+      final canGetScannedResults = await WiFiScan.instance.canGetScannedResults();
+      final canStartScan = await WiFiScan.instance.canStartScan();
+      
+      if (canGetScannedResults == CanGetScannedResults.yes && canStartScan == CanStartScan.yes) {
+        _scanStatus = 'Ready to scan';
+      } else if (canGetScannedResults == CanGetScannedResults.yes && canStartScan != CanStartScan.yes) {
+        _scanStatus = 'Can read results but cannot start scan: $canStartScan';
+      } else if (canGetScannedResults != CanGetScannedResults.yes && canStartScan == CanStartScan.yes) {
+        _scanStatus = 'Can start scan but cannot read results: $canGetScannedResults';
+      } else {
+        _scanStatus = 'Permissions denied - Using sample data';
+        _processSampleData();
+      }
+    } catch (e) {
+      _scanStatus = 'Permission check failed: $e - Using sample data';
+      _processSampleData();
     }
   }
 
@@ -35,20 +47,37 @@ class WiFiScannerController {
       if (canStartScan == CanStartScan.yes) {
         await WiFiScan.instance.startScan();
         
-        // Start timer to check for results
-        _scanTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+        // Wait a bit for scan to complete with timeout
+        bool scanCompleted = false;
+        int attempts = 0;
+        const maxAttempts = 3;
+        
+        while (!scanCompleted && attempts < maxAttempts) {
+          await Future.delayed(const Duration(seconds: 1));
+          attempts++;
+          
           final results = await WiFiScan.instance.getScannedResults();
           if (results.isNotEmpty) {
-            timer.cancel();
             _processResults(results);
+            scanCompleted = true;
+          } else if (attempts >= maxAttempts) {
+            // Fallback to sample data after timeout
+            _scanStatus = 'Scan timeout - Using sample data';
+            _processSampleData();
           }
-        });
+        }
+        
+        if (!scanCompleted) {
+          _isScanning = false;
+        }
       } else {
-        _scanStatus = 'Cannot start scan: $canStartScan';
+        _scanStatus = 'Cannot start scan: $canStartScan - Using sample data';
+        _processSampleData();
         _isScanning = false;
       }
     } catch (e) {
-      _scanStatus = 'Error: $e';
+      _scanStatus = 'Error: $e - Using sample data';
+      _processSampleData();
       _isScanning = false;
     }
   }
@@ -72,6 +101,50 @@ class WiFiScannerController {
     
     _isScanning = false;
     _scanStatus = 'Found ${_networks.length} networks';
+  }
+
+  /// Process sample data for demonstration purposes
+  void _processSampleData() {
+    final sampleNetworks = [
+      WiFiNetwork(
+        ssid: 'HomeWiFi_5G',
+        level: -45,
+        frequency: 5180,
+        capabilities: 'WPA2-PSK-CCMP',
+        isConnected: true,
+      ),
+      WiFiNetwork(
+        ssid: 'Neighbor_Network',
+        level: -67,
+        frequency: 2412,
+        capabilities: 'WPA2-PSK-CCMP',
+        isConnected: false,
+      ),
+      WiFiNetwork(
+        ssid: 'Office_Network',
+        level: -72,
+        frequency: 5220,
+        capabilities: 'WPA2-EAP-CCMP',
+        isConnected: false,
+      ),
+      WiFiNetwork(
+        ssid: 'Public_WiFi',
+        level: -78,
+        frequency: 2437,
+        capabilities: 'OPEN',
+        isConnected: false,
+      ),
+      WiFiNetwork(
+        ssid: 'Guest_Network',
+        level: -81,
+        frequency: 5180,
+        capabilities: 'WPA2-PSK-CCMP',
+        isConnected: false,
+      ),
+    ];
+    
+    _networks = sampleNetworks;
+    _scanStatus = 'Found ${_networks.length} sample networks';
   }
 
   /// Identify which network the device is connected to

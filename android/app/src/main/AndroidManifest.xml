@@ -6,8 +6,22 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
     
+    <!-- Network scanning and device discovery permissions -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    
+    <!-- For local network device discovery -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    
+    <!-- For network interface and connection info -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
+    <!-- For network security analysis -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    
     <application
-        android:label="fluttertest"
+        android:label="WiFi Security Scanner"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
