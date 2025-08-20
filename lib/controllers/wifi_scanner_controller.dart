@@ -23,14 +23,14 @@ class WiFiScannerController {
       if (canGetScannedResults == CanGetScannedResults.yes && canStartScan == CanStartScan.yes) {
         _scanStatus = 'Ready to scan - All permissions granted';
       } else if (canGetScannedResults == CanGetScannedResults.yes && canStartScan != CanStartScan.yes) {
-        _scanStatus = 'Can read results but cannot start scan: $canStartScan\nPlease enable WiFi and grant location permission';
+        _scanStatus = 'Cannot start scan: $canStartScan\nPlease:\n• Enable WiFi\n• Enable Location Services\n• Grant location permission to this app';
       } else if (canGetScannedResults != CanGetScannedResults.yes && canStartScan == CanStartScan.yes) {
-        _scanStatus = 'Can start scan but cannot read results: $canGetScannedResults\nPlease enable WiFi and grant location permission';
+        _scanStatus = 'Cannot read results: $canGetScannedResults\nPlease:\n• Enable WiFi\n• Enable Location Services\n• Grant location permission to this app';
       } else {
-        _scanStatus = 'Permissions denied: Start=$canStartScan, Get=$canGetScannedResults\nPlease enable WiFi and grant location permission in settings';
+        _scanStatus = 'WiFi scanning requires:\n• WiFi enabled\n• Location Services enabled\n• Location permission granted to this app\n\nCurrent status: Start=$canStartScan, Get=$canGetScannedResults';
       }
     } catch (e) {
-      _scanStatus = 'Permission check failed: $e\nPlease enable WiFi and check app permissions';
+      _scanStatus = 'Permission check failed: $e\nPlease:\n• Enable WiFi\n• Enable Location Services\n• Grant location permission to this app';
     }
   }
 
@@ -80,21 +80,21 @@ class WiFiScannerController {
         }
         
         if (!scanCompleted) {
-          _scanStatus = 'Scan failed after $maxAttempts attempts. Please enable WiFi and try again.';
+          _scanStatus = 'Scan failed after $maxAttempts attempts.\nPlease ensure:\n• WiFi is enabled\n• Location Services are enabled\n• Location permission is granted to this app';
           _isScanning = false;
         }
       } else if (canStartScan != CanStartScan.yes) {
-        _scanStatus = 'WiFi is disabled. Please enable WiFi in your device settings and try again.';
+        _scanStatus = 'Cannot start WiFi scan.\nPlease:\n• Enable WiFi in device settings\n• Enable Location Services\n• Grant location permission to this app';
         _isScanning = false;
       } else if (canGetResults != CanGetScannedResults.yes) {
-        _scanStatus = 'Cannot read scan results. Please check location permissions and enable WiFi.';
+        _scanStatus = 'Cannot read scan results.\nPlease:\n• Enable WiFi\n• Enable Location Services\n• Grant location permission to this app';
         _isScanning = false;
       } else {
-        _scanStatus = 'Cannot scan: Start=$canStartScan, Get=$canGetResults. Please enable WiFi and check permissions.';
+        _scanStatus = 'WiFi scanning not available.\nPlease:\n• Enable WiFi\n• Enable Location Services\n• Grant location permission to this app\n\nStatus: Start=$canStartScan, Get=$canGetResults';
         _isScanning = false;
       }
     } catch (e) {
-      _scanStatus = 'Scan error: $e. Please enable WiFi and try again.';
+      _scanStatus = 'Scan error: $e\nPlease:\n• Enable WiFi\n• Enable Location Services\n• Grant location permission to this app';
       _isScanning = false;
     }
   }
@@ -146,9 +146,10 @@ class WiFiScannerController {
 
   /// Request permissions (placeholder for now)
   Future<void> requestPermissions() async {
-    _scanStatus = 'Requesting permissions... Please grant location access in the dialog.';
+    _scanStatus = 'To scan WiFi networks, please:\n• Grant location permission when prompted\n• Enable Location Services in device settings\n• Ensure WiFi is enabled';
     // In a real app, you would request permissions here
     // For now, just recheck what we have
+    await Future.delayed(const Duration(seconds: 2));
     await checkPermissions();
   }
 

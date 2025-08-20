@@ -147,62 +147,124 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
                       child: Text(
                         _controller.scanStatus,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 13,
                           color: Colors.grey[700],
                           fontWeight: FontWeight.w500,
                         ),
-                        maxLines: 3,
+                        maxLines: 8,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
+                
+                // Additional explanation for requirements
+                if (_controller.scanStatus.contains('requires') || _controller.scanStatus.contains('Enable'))
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: Colors.blue[700],
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Android requires both WiFi and Location to be enabled for network scanning. This is a system security requirement.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.blue[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
           const SizedBox(height: 16),
           
           // Action buttons
-          Row(
+          Column(
             children: [
-              // Permission button (when needed)
-              if (_controller.scanStatus.contains('denied') || _controller.scanStatus.contains('cannot'))
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _requestPermissions(),
-                    icon: const Icon(Icons.settings, size: 18),
-                    label: const Text('Permissions'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+              // Permission/Settings buttons (when needed)
+              if (_controller.scanStatus.contains('Enable') || _controller.scanStatus.contains('Grant') || _controller.scanStatus.contains('requires'))
+                Row(
+                  children: [
+                    // Location Settings button
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _openLocationSettings(),
+                        icon: const Icon(Icons.location_on, size: 18),
+                        label: const Text('Location'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    
+                    const SizedBox(width: 8),
+                    
+                    // WiFi Settings button
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _openWiFiSettings(),
+                        icon: const Icon(Icons.wifi_off, size: 18),
+                        label: const Text('WiFi'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(width: 8),
+                    
+                    // App Permissions button
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _requestPermissions(),
+                        icon: const Icon(Icons.security, size: 18),
+                        label: const Text('Permissions'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.purple,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               
-              // WiFi enable button (when needed)
-              if (_controller.scanStatus.contains('WiFi is disabled') || _controller.scanStatus.contains('enable WiFi'))
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _openWiFiSettings(),
-                    icon: const Icon(Icons.wifi_off, size: 18),
-                    label: const Text('Enable WiFi'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
+              // Spacing when buttons are shown
+              if (_controller.scanStatus.contains('Enable') || _controller.scanStatus.contains('Grant') || _controller.scanStatus.contains('requires'))
+                const SizedBox(height: 12),
               
               // Main scan button
-              Expanded(
+              SizedBox(
+                width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: _controller.isScanning ? null : _startScan,
                   icon: _controller.isScanning 
@@ -213,7 +275,7 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
                       )
                     : const Icon(Icons.wifi_find, size: 18),
                   label: Text(
-                    _controller.isScanning ? 'Scanning...' : 'Scan WiFi',
+                    _controller.isScanning ? 'Scanning...' : 'Scan WiFi Networks',
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
@@ -660,13 +722,52 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Enable WiFi'),
+          title: const Row(
+            children: [
+              Icon(Icons.wifi, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Enable WiFi'),
+            ],
+          ),
           content: const Text(
-            'Please enable WiFi in your device settings:\n\n'
+            'WiFi must be enabled to scan for networks:\n\n'
             '1. Go to Settings\n'
             '2. Tap on WiFi\n'
             '3. Turn on WiFi\n'
-            '4. Come back to this app and try scanning again',
+            '4. Return to this app and try scanning again',
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Open Location settings
+  void _openLocationSettings() {
+    // Show a dialog to guide user to Location settings
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.location_on, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Enable Location'),
+            ],
+          ),
+          content: const Text(
+            'Location Services are required for WiFi scanning on Android:\n\n'
+            '1. Go to Settings\n'
+            '2. Tap on Location\n'
+            '3. Turn on Location Services\n'
+            '4. Also grant location permission to this app\n'
+            '5. Return to this app and try scanning again',
           ),
           actions: <Widget>[
             TextButton(
