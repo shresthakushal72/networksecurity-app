@@ -50,4 +50,30 @@ class WiFiNetwork {
 
   /// Get display name
   String get displayName => isHidden ? 'Hidden Network' : ssid;
+
+  /// Get frequency band (2.4G, 5G, etc.)
+  String get frequencyBand {
+    if (frequency >= 2400 && frequency <= 2483) {
+      return '2.4G';
+    } else if (frequency >= 5000 && frequency <= 5900) {
+      return '5G';
+    } else if (frequency >= 5900 && frequency <= 7125) {
+      return '6G';
+    } else {
+      return 'Unknown';
+    }
+  }
+
+  /// Get frequency band color for UI
+  int get frequencyBandColor {
+    if (frequency >= 2400 && frequency <= 2483) {
+      return 0xFF2196F3; // Blue for 2.4G
+    } else if (frequency >= 5000 && frequency <= 5900) {
+      return 0xFF4CAF50; // Green for 5G
+    } else if (frequency >= 5900 && frequency <= 7125) {
+      return 0xFF9C27B0; // Purple for 6G
+    } else {
+      return 0xFF9E9E9E; // Grey for unknown
+    }
+  }
 }

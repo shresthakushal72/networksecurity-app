@@ -68,144 +68,24 @@ class NetworkScannerController {
 
   /// Simulate network scanning (replace with real implementation)
   Future<void> _simulateNetworkScan() async {
-    List<NetworkDevice> devices = [];
-    
-    // Common home network devices
-    devices.add(NetworkDevice(
-      ipAddress: '192.168.1.1',
-      hostname: 'router.home',
-      macAddress: 'AA:BB:CC:DD:EE:FF',
-      deviceType: 'Router/Gateway',
-      manufacturer: 'TP-Link',
-      isOnline: true,
-      openPorts: '80, 443, 22',
-      services: 'HTTP, HTTPS, SSH',
-      securityRisk: 'Low - Router management',
-      riskColor: 0xFF4CAF50, // Green
-    ));
-
-    devices.add(NetworkDevice(
-      ipAddress: '192.168.1.100',
-      hostname: 'android-phone',
-      macAddress: '11:22:33:44:55:66',
-      deviceType: 'Mobile Device',
-      manufacturer: 'Samsung',
-      isOnline: true,
-      openPorts: 'None detected',
-      services: 'Mobile services',
-      securityRisk: 'Low - Personal device',
-      riskColor: 0xFF4CAF50, // Green
-    ));
-
-    devices.add(NetworkDevice(
-      ipAddress: '192.168.1.101',
-      hostname: 'laptop-pc',
-      macAddress: 'AA:11:BB:22:CC:33',
-      deviceType: 'Computer',
-      manufacturer: 'Dell',
-      isOnline: true,
-      openPorts: '135, 139, 445',
-      services: 'Windows networking',
-      securityRisk: 'Medium - File sharing enabled',
-      riskColor: 0xFFFF9800, // Orange
-    ));
-
-    // CCTV Camera Detection
-    devices.add(NetworkDevice(
-      ipAddress: '192.168.1.200',
-      hostname: 'camera-01',
-      macAddress: 'CC:TV:CA:ME:RA:01',
-      deviceType: 'Security Camera',
-      manufacturer: 'Hikvision',
-      isOnline: true,
-      openPorts: '80, 554, 8000',
-      services: 'HTTP, RTSP, Web interface',
-      securityRisk: 'High - Potential security camera',
-      riskColor: 0xFFF44336, // Red
-    ));
-
-    devices.add(NetworkDevice(
-      ipAddress: '192.168.1.201',
-      hostname: 'camera-02',
-      macAddress: 'CC:TV:CA:ME:RA:02',
-      deviceType: 'Security Camera',
-      manufacturer: 'Dahua',
-      isOnline: true,
-      openPorts: '80, 554, 37777',
-      services: 'HTTP, RTSP, Dahua protocol',
-      securityRisk: 'High - Potential security camera',
-      riskColor: 0xFFF44336, // Red
-    ));
-
-    // IoT Devices
-    devices.add(NetworkDevice(
-      ipAddress: '192.168.1.150',
-      hostname: 'smart-tv',
-      macAddress: 'SM:AR:TV:DE:VI:CE',
-      deviceType: 'Smart TV',
-      manufacturer: 'Samsung',
-      isOnline: true,
-      openPorts: '80, 8001, 8002',
-      services: 'HTTP, Smart TV services',
-      securityRisk: 'Medium - IoT device',
-      riskColor: 0xFFFFEB3B, // Yellow
-    ));
-
-    devices.add(NetworkDevice(
-      ipAddress: '192.168.1.151',
-      hostname: 'printer-office',
-      macAddress: 'PR:IN:TE:RR:01',
-      deviceType: 'Network Printer',
-      manufacturer: 'HP',
-      isOnline: true,
-      openPorts: '80, 631, 9100',
-      services: 'HTTP, IPP, Raw printing',
-      securityRisk: 'Medium - IoT device',
-      riskColor: 0xFFFFEB3B, // Yellow
-    ));
-
-    // Reduced scan delay for faster response
+    // In a real app, this would scan the actual network
+    // For now, just show that scanning is not implemented
     await Future.delayed(const Duration(milliseconds: 500));
     
-    _devices = devices;
+    // Don't populate with demo data - show empty list
+    _devices = [];
+    _scanStatus = 'Network scanning not implemented yet. This would require additional network discovery packages.';
   }
 
   /// Simulate quick network scanning (faster, fewer devices)
   Future<void> _simulateQuickScan() async {
-    List<NetworkDevice> devices = [];
-    
-    // Only essential devices for quick scan
-    devices.add(NetworkDevice(
-      ipAddress: '192.168.1.1',
-      hostname: 'router.home',
-      macAddress: 'AA:BB:CC:DD:EE:FF',
-      deviceType: 'Router/Gateway',
-      manufacturer: 'TP-Link',
-      isOnline: true,
-      openPorts: '80, 443, 22',
-      services: 'HTTP, HTTPS, SSH',
-      securityRisk: 'Low - Router management',
-      riskColor: 0xFF4CAF50, // Green
-    ));
-
-    // Check for CCTV cameras (high priority)
-    devices.add(NetworkDevice(
-      ipAddress: '192.168.1.200',
-      hostname: 'camera-01',
-      macAddress: 'CC:TV:CA:ME:RA:01',
-      deviceType: 'Security Camera',
-      manufacturer: 'Hikvision',
-      isOnline: true,
-      openPorts: '80, 554, 8000',
-      services: 'HTTP, RTSP, Web interface',
-      securityRisk: 'High - Potential security camera',
-      riskColor: 0xFFF44336, // Red
-    ));
-
-    // Very fast scan delay
+    // In a real app, this would do a quick network scan
+    // For now, just show that scanning is not implemented
     await Future.delayed(const Duration(milliseconds: 200));
     
-    _devices = devices;
+    // Don't populate with demo data - show empty list
+    _devices = [];
+    _scanStatus = 'Quick network scanning not implemented yet. This would require additional network discovery packages.';
   }
 
   /// Get CCTV devices

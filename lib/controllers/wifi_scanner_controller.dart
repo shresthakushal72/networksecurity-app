@@ -21,18 +21,16 @@ class WiFiScannerController {
       final canStartScan = await WiFiScan.instance.canStartScan();
       
       if (canGetScannedResults == CanGetScannedResults.yes && canStartScan == CanStartScan.yes) {
-        _scanStatus = 'Ready to scan';
+        _scanStatus = 'Ready to scan - All permissions granted';
       } else if (canGetScannedResults == CanGetScannedResults.yes && canStartScan != CanStartScan.yes) {
-        _scanStatus = 'Can read results but cannot start scan: $canStartScan';
+        _scanStatus = 'Can read results but cannot start scan: $canStartScan\nPlease enable WiFi and grant location permission';
       } else if (canGetScannedResults != CanGetScannedResults.yes && canStartScan == CanStartScan.yes) {
-        _scanStatus = 'Can start scan but cannot read results: $canGetScannedResults';
+        _scanStatus = 'Can start scan but cannot read results: $canGetScannedResults\nPlease enable WiFi and grant location permission';
       } else {
-        _scanStatus = 'Permissions denied - Using sample data';
-        _processSampleData();
+        _scanStatus = 'Permissions denied: Start=$canStartScan, Get=$canGetScannedResults\nPlease enable WiFi and grant location permission in settings';
       }
     } catch (e) {
-      _scanStatus = 'Permission check failed: $e - Using sample data';
-      _processSampleData();
+      _scanStatus = 'Permission check failed: $e\nPlease enable WiFi and check app permissions';
     }
   }
 
@@ -43,41 +41,60 @@ class WiFiScannerController {
     _networks.clear();
 
     try {
+      // First check permissions again
       final canStartScan = await WiFiScan.instance.canStartScan();
-      if (canStartScan == CanStartScan.yes) {
-        await WiFiScan.instance.startScan();
+      final canGetResults = await WiFiScan.instance.canGetScannedResults();
+      
+      _scanStatus = 'Checking permissions... CanStart: $canStartScan, CanGet: $canGetResults';
+      
+      if (canStartScan == CanStartScan.yes && canGetResults == CanGetScannedResults.yes) {
+        _scanStatus = 'Starting WiFi scan...';
         
-        // Wait a bit for scan to complete with timeout
+        // Start the scan
+        final startResult = await WiFiScan.instance.startScan();
+        _scanStatus = 'Scan started: $startResult';
+        
+        // Wait longer and try more times for real devices
         bool scanCompleted = false;
         int attempts = 0;
-        const maxAttempts = 3;
+        const maxAttempts = 10; // Increased from 3 to 10
         
         while (!scanCompleted && attempts < maxAttempts) {
-          await Future.delayed(const Duration(seconds: 1));
+          await Future.delayed(const Duration(seconds: 2)); // Increased from 1 to 2 seconds
           attempts++;
           
-          final results = await WiFiScan.instance.getScannedResults();
-          if (results.isNotEmpty) {
-            _processResults(results);
-            scanCompleted = true;
-          } else if (attempts >= maxAttempts) {
-            // Fallback to sample data after timeout
-            _scanStatus = 'Scan timeout - Using sample data';
-            _processSampleData();
+          _scanStatus = 'Checking results... Attempt $attempts/$maxAttempts';
+          
+          try {
+            final results = await WiFiScan.instance.getScannedResults();
+            if (results.isNotEmpty) {
+              _scanStatus = 'Found ${results.length} networks!';
+              _processResults(results);
+              scanCompleted = true;
+            } else {
+              _scanStatus = 'No results yet... Attempt $attempts/$maxAttempts';
+            }
+          } catch (e) {
+            _scanStatus = 'Error getting results: $e - Attempt $attempts/$maxAttempts';
           }
         }
         
         if (!scanCompleted) {
+          _scanStatus = 'Scan failed after $maxAttempts attempts. Please enable WiFi and try again.';
           _isScanning = false;
         }
+      } else if (canStartScan != CanStartScan.yes) {
+        _scanStatus = 'WiFi is disabled. Please enable WiFi in your device settings and try again.';
+        _isScanning = false;
+      } else if (canGetResults != CanGetScannedResults.yes) {
+        _scanStatus = 'Cannot read scan results. Please check location permissions and enable WiFi.';
+        _isScanning = false;
       } else {
-        _scanStatus = 'Cannot start scan: $canStartScan - Using sample data';
-        _processSampleData();
+        _scanStatus = 'Cannot scan: Start=$canStartScan, Get=$canGetResults. Please enable WiFi and check permissions.';
         _isScanning = false;
       }
     } catch (e) {
-      _scanStatus = 'Error: $e - Using sample data';
-      _processSampleData();
+      _scanStatus = 'Scan error: $e. Please enable WiFi and try again.';
       _isScanning = false;
     }
   }
@@ -98,50 +115,6 @@ class WiFiScannerController {
     
     _isScanning = false;
     _scanStatus = 'Found ${_networks.length} networks';
-  }
-
-  /// Process sample data for demonstration purposes
-  void _processSampleData() {
-    final sampleNetworks = [
-      WiFiNetwork(
-        ssid: 'HomeWiFi_5G',
-        level: -45,
-        frequency: 5180,
-        capabilities: 'WPA2-PSK-CCMP',
-        isConnected: true,
-      ),
-      WiFiNetwork(
-        ssid: 'Neighbor_Network',
-        level: -67,
-        frequency: 2412,
-        capabilities: 'WPA2-PSK-CCMP',
-        isConnected: false,
-      ),
-      WiFiNetwork(
-        ssid: 'Office_Network',
-        level: -72,
-        frequency: 5220,
-        capabilities: 'WPA2-EAP-CCMP',
-        isConnected: false,
-      ),
-      WiFiNetwork(
-        ssid: 'Public_WiFi',
-        level: -78,
-        frequency: 2437,
-        capabilities: 'OPEN',
-        isConnected: false,
-      ),
-      WiFiNetwork(
-        ssid: 'Guest_Network',
-        level: -81,
-        frequency: 5180,
-        capabilities: 'WPA2-PSK-CCMP',
-        isConnected: false,
-      ),
-    ];
-    
-    _networks = sampleNetworks;
-    _scanStatus = 'Found ${_networks.length} sample networks';
   }
 
   /// Identify which network the device is connected to
@@ -169,5 +142,18 @@ class WiFiScannerController {
   /// Dispose resources
   void dispose() {
     _scanTimer?.cancel();
+  }
+
+  /// Request permissions (placeholder for now)
+  Future<void> requestPermissions() async {
+    _scanStatus = 'Requesting permissions... Please grant location access in the dialog.';
+    // In a real app, you would request permissions here
+    // For now, just recheck what we have
+    await checkPermissions();
+  }
+
+  /// Get permission status for debugging
+  String getPermissionStatus() {
+    return 'Scan Status: $_scanStatus';
   }
 }
