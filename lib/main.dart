@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'views/wifi_scanner_view.dart';
+import 'views/main_navigation_view.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,12 +11,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'WiFi Security Scanner',
+      debugShowCheckedModeBanner: false,
+      title: 'Network Security Scanner',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const WiFiScannerView(),
+      home: const MainNavigationView(),
     );
   }
 }

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/wifi_network.dart';
 import '../models/security_analysis.dart';
-import '../models/network_device.dart';
 import '../controllers/security_analysis_controller.dart';
-import '../controllers/network_scanner_controller.dart';
 
 /// WiFi Details View showing security analysis and network scanning
 class WiFiDetailsView extends StatefulWidget {
@@ -17,21 +15,18 @@ class WiFiDetailsView extends StatefulWidget {
 
 class _WiFiDetailsViewState extends State<WiFiDetailsView> {
   late SecurityAnalysisController _securityController;
-  late NetworkScannerController _networkController;
   late SecurityAnalysis _securityAnalysis;
 
-  @override
+    @override
   void initState() {
     super.initState();
     _securityController = SecurityAnalysisController();
-    _networkController = NetworkScannerController();
-    
+
     // Analyze network security
     _securityAnalysis = _securityController.analyzeNetwork(widget.network);
-    
-    // Initialize network scanner
-    _networkController.initializeNetworkInfo();
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -79,18 +74,8 @@ class _WiFiDetailsViewState extends State<WiFiDetailsView> {
             
             const SizedBox(height: 24),
             
-            // Action Buttons
-            _buildActionButtons(),
-            
-            const SizedBox(height: 32),
-            
-            // Network Device Scanning Section
-            _buildNetworkScanningSection(),
-            
-            // Device Lists
-            if (_networkController.devices.isNotEmpty) ...[
-              _buildDeviceLists(),
-            ],
+                                    // Action Buttons
+                        _buildActionButtons(),
           ],
         ),
       ),
@@ -109,53 +94,115 @@ class _WiFiDetailsViewState extends State<WiFiDetailsView> {
       ),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.wifi,
-                color: Color(_securityAnalysis.scoreColor),
-                size: 48,
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.network.displayName,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+          // Responsive header row - stack on small screens
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 600) {
+                // Stack layout for small screens
+                return Column(
+                  children: [
+                    Icon(
+                      Icons.wifi,
                       color: Color(_securityAnalysis.scoreColor),
+                      size: 48,
                     ),
-                  ),
-                  Text(
-                    'Security Score: ${_securityAnalysis.securityScore}/100',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
+                    const SizedBox(height: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          widget.network.displayName,
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Color(_securityAnalysis.scoreColor),
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Security Score: ${_securityAnalysis.securityScore}/100',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            color: Color(_securityAnalysis.scoreColor),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _securityAnalysis.scoreLabel,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Color(_securityAnalysis.scoreColor),
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              } else {
+                // Row layout for larger screens
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.wifi,
                       color: Color(_securityAnalysis.scoreColor),
+                      size: 48,
                     ),
-                  ),
-                  Text(
-                    _securityAnalysis.scoreLabel,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Color(_securityAnalysis.scoreColor),
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.network.displayName,
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Color(_securityAnalysis.scoreColor),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                        Text(
+                          'Security Score: ${_securityAnalysis.securityScore}/100',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            color: Color(_securityAnalysis.scoreColor),
+                          ),
+                        ),
+                        Text(
+                          _securityAnalysis.scoreLabel,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Color(_securityAnalysis.scoreColor),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                );
+              }
+            },
           ),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildInfoCard('Signal', widget.network.signalStrength, Color(widget.network.signalColor)),
-              _buildInfoCard('Frequency', '${widget.network.frequency} MHz', Colors.blue),
-              _buildInfoCard('Security', widget.network.capabilities, Color(_securityAnalysis.riskColor)),
-            ],
+          // Responsive info cards - scrollable on small screens
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildInfoCard('Signal', widget.network.signalStrength, Color(widget.network.signalColor)),
+                const SizedBox(width: 12),
+                _buildInfoCard('Frequency', '${widget.network.frequency} MHz', Colors.blue),
+                const SizedBox(width: 12),
+                _buildInfoCard('Security', _getShortSecurity(widget.network.capabilities), Color(_securityAnalysis.riskColor)),
+              ],
+            ),
           ),
         ],
       ),
@@ -387,34 +434,74 @@ class _WiFiDetailsViewState extends State<WiFiDetailsView> {
 
   /// Build action buttons
   Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () => _showRiskAssessment(context),
-            icon: const Icon(Icons.assessment),
-            label: const Text('Full Risk Assessment'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () => _showSecurityInfo(context),
-            icon: const Icon(Icons.info),
-            label: const Text('Learn More'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 500) {
+          // Stack layout for small screens
+          return Column(
+            children: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showRiskAssessment(context),
+                  icon: const Icon(Icons.assessment),
+                  label: const Text('Full Risk Assessment'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showSecurityInfo(context),
+                  icon: const Icon(Icons.info),
+                  label: const Text('Learn More'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          );
+        } else {
+          // Row layout for larger screens
+          return Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _showRiskAssessment(context),
+                  icon: const Icon(Icons.assessment),
+                  label: const Text('Full Risk Assessment'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _showSecurityInfo(context),
+                  icon: const Icon(Icons.info),
+                  label: const Text('Learn More'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+      },
     );
   }
 
@@ -431,22 +518,59 @@ class _WiFiDetailsViewState extends State<WiFiDetailsView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.network_check,
-                color: Colors.purple[700],
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '🔍 Local Network Device Scanner',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.purple[700],
-                ),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 500) {
+                // Stack layout for small screens
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.network_check,
+                          color: Colors.purple[700],
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            '🔍 Local Network Device Scanner',
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.purple[700],
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              } else {
+                // Row layout for larger screens
+                return Row(
+                  children: [
+                    Icon(
+                      Icons.network_check,
+                      color: Colors.purple[700],
+                      size: 28,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '🔍 Local Network Device Scanner',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+            },
           ),
           const SizedBox(height: 16),
           Text(
@@ -458,360 +582,224 @@ class _WiFiDetailsViewState extends State<WiFiDetailsView> {
           ),
           const SizedBox(height: 16),
           
-          // Network Info
-          if (_networkController.localIPAddress != null) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.purple[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Network Information:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.purple[700],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildNetworkInfoRow('Local IP:', _networkController.localIPAddress!),
-                  if (_networkController.gatewayIP != null) _buildNetworkInfoRow('Gateway:', _networkController.gatewayIP!),
-                  if (_networkController.subnetMask != null) _buildNetworkInfoRow('Subnet:', _networkController.subnetMask!),
-                ],
-              ),
+          // Network Info - Show status when not available
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange, width: 1),
             ),
-            const SizedBox(height: 16),
-          ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Network Scanning Not Available Yet',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[700],
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'This feature requires additional packages that are not yet implemented:',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.orange[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.orange[300]!, width: 1),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Required Packages:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[700],
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('• ping_discover_network - Device discovery', style: TextStyle(fontSize: 11, color: Colors.orange[600])),
+                      Text('• network_tools - Port scanning', style: TextStyle(fontSize: 11, color: Colors.orange[600])),
+                      Text('• arp_scan - MAC address discovery', style: TextStyle(fontSize: 11, color: Colors.orange[600])),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'This feature will be available in future updates when these packages are integrated.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.orange[600],
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
           
-          // Scan Button
+          // Scan Button - Disabled
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: _networkController.isScanning ? null : _startNetworkScan,
-              icon: _networkController.isScanning 
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.search),
-              label: Text(_networkController.isScanning ? 'Scanning...' : 'Full Network Scan'),
+              onPressed: null, // Disabled
+              icon: const Icon(Icons.block, color: Colors.grey),
+              label: const Text('Full Network Scan (Coming Soon)'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.purple,
-                foregroundColor: Colors.white,
+                backgroundColor: Colors.grey[400],
+                foregroundColor: Colors.grey[600],
               ),
             ),
           ),
           
           const SizedBox(height: 12),
           
-          // Quick Scan Button
+          // Quick Scan Button - Disabled
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: _networkController.isScanning ? null : _startQuickScan,
-              icon: _networkController.isScanning 
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.flash_on),
-              label: Text(_networkController.isScanning ? 'Scanning...' : 'Quick Scan (Faster)'),
+              onPressed: null, // Disabled
+              icon: const Icon(Icons.block, color: Colors.grey),
+              label: const Text('Quick Scan (Coming Soon)'),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: Colors.grey[400],
+                foregroundColor: Colors.grey[600],
               ),
             ),
           ),
           
           const SizedBox(height: 16),
           
-          // Scan Status with Progress
+          // Scan Status - Show feature not available
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.purple[50],
+              color: Colors.grey[50],
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.purple, width: 1),
+              border: Border.all(color: Colors.grey, width: 1),
             ),
             child: Column(
               children: [
-                if (_networkController.isScanning) ...[
-                  LinearProgressIndicator(
-                    backgroundColor: Colors.purple[200],
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                Text(
-                  _networkController.scanStatus,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.purple[600],
-                    fontStyle: FontStyle.italic,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-          
-          // Network Security Summary
-          if (_networkController.devices.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange, width: 1),
-              ),
-              child: Text(
-                _networkController.getNetworkSecuritySummary(),
-                style: TextStyle(
-                  color: Colors.orange[700],
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  /// Build network info row
-  Widget _buildNetworkInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: Colors.purple[700],
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.purple[700],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build device lists
-  Widget _buildDeviceLists() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 24),
-        
-        // CCTV Cameras Section
-        if (_networkController.getCCTVDevices().isNotEmpty) ...[
-          Text(
-            '📹 CCTV Cameras Detected',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.red[700],
-            ),
-          ),
-          const SizedBox(height: 16),
-          ..._networkController.getCCTVDevices().map((device) => _buildDeviceCard(device)),
-          const SizedBox(height: 24),
-        ],
-        
-        // IoT Devices Section
-        if (_networkController.getIoTDevices().isNotEmpty) ...[
-          Text(
-            '🏠 IoT Devices',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.orange[700],
-            ),
-          ),
-          const SizedBox(height: 16),
-          ..._networkController.getIoTDevices().map((device) => _buildDeviceCard(device)),
-          const SizedBox(height: 24),
-        ],
-        
-        // All Devices Section
-        Text(
-          '📱 All Network Devices',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ..._networkController.devices.map((device) => _buildDeviceCard(device)),
-      ],
-    );
-  }
-
-  /// Build device card
-  Widget _buildDeviceCard(NetworkDevice device) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Color(device.riskColor).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            device.deviceIcon,
-            style: const TextStyle(fontSize: 24),
-          ),
-        ),
-        title: Text(
-          device.displayName,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('${device.deviceType} - ${device.ipAddress}'),
-            if (device.manufacturer != null) Text('Manufacturer: ${device.manufacturer}'),
-            Text(
-              'Risk: ${device.securityRisk}',
-              style: TextStyle(
-                color: Color(device.riskColor),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Color(device.riskColor),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            device.isOnline ? 'ONLINE' : 'OFFLINE',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        onTap: () => _showDeviceDetails(device),
-      ),
-    );
-  }
-
-  /// Start network scan
-  void _startNetworkScan() async {
-    await _networkController.startNetworkScan();
-    setState(() {});
-  }
-
-  /// Start quick network scan
-  void _startQuickScan() async {
-    await _networkController.startQuickScan();
-    setState(() {});
-  }
-
-  /// Show device details
-  void _showDeviceDetails(NetworkDevice device) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Device: ${device.displayName}'),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildDeviceInfoRow('IP Address:', device.ipAddress),
-                if (device.hostname != null) _buildDeviceInfoRow('Hostname:', device.hostname!),
-                if (device.macAddress != null) _buildDeviceInfoRow('MAC Address:', device.macAddress!),
-                _buildDeviceInfoRow('Device Type:', device.deviceType),
-                if (device.manufacturer != null) _buildDeviceInfoRow('Manufacturer:', device.manufacturer!),
-                _buildDeviceInfoRow('Status:', device.isOnline ? 'Online' : 'Offline'),
-                if (device.openPorts != null) _buildDeviceInfoRow('Open Ports:', device.openPorts!),
-                if (device.services != null) _buildDeviceInfoRow('Services:', device.services!),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Color(device.riskColor).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Color(device.riskColor), width: 1),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Security Risk: ${device.securityRisk}',
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.grey[600], size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Feature Status',
                         style: TextStyle(
-                          color: Color(device.riskColor),
                           fontWeight: FontWeight.bold,
+                          color: Colors.grey[700],
+                          fontSize: 14,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _networkController.getDeviceSecurityAdvice(device),
-                        style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Network device scanning is not yet implemented. This feature will allow you to discover connected devices, detect security cameras, and identify potential security risks on your local network.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+              ],
+            ),
+          ),
+          
+          // Network Security Summary - Not available
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue, width: 1),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.security, color: Colors.blue[700], size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Network Security Analysis',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[700],
+                        fontSize: 14,
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'When network scanning becomes available, you will be able to analyze the security of all connected devices, identify potential vulnerabilities, and get recommendations for improving your network security.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.blue[600],
+                    height: 1.4,
                   ),
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  /// Build device info row
-  Widget _buildDeviceInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: Text(value),
-          ),
         ],
       ),
     );
   }
+
+
+
+
+
+
+
+
+
+  /// Get shortened security string to prevent overflow
+  String _getShortSecurity(String capabilities) {
+    if (capabilities.contains('WPA3')) return 'WPA3';
+    if (capabilities.contains('WPA2')) return 'WPA2';
+    if (capabilities.contains('WPA')) return 'WPA';
+    if (capabilities.contains('WEP')) return 'WEP';
+    if (capabilities.contains('OPEN')) return 'Open';
+    if (capabilities.contains('EAP')) return 'Enterprise';
+    
+    // If still too long, truncate
+    if (capabilities.length > 15) {
+      return '${capabilities.substring(0, 12)}...';
+    }
+    return capabilities;
+  }
+
+
 
   /// Show risk assessment
   void _showRiskAssessment(BuildContext context) {

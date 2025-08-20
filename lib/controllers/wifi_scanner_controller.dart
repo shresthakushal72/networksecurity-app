@@ -22,6 +22,8 @@ class WiFiScannerController {
       
       if (canGetScannedResults == CanGetScannedResults.yes && canStartScan == CanStartScan.yes) {
         _scanStatus = 'Ready to scan - All permissions granted';
+        // Auto-scan when requirements are met
+        _autoScan();
       } else if (canGetScannedResults == CanGetScannedResults.yes && canStartScan != CanStartScan.yes) {
         _scanStatus = 'Cannot start scan: $canStartScan\nPlease:\n• Enable WiFi\n• Enable Location Services\n• Grant location permission to this app';
       } else if (canGetScannedResults != CanGetScannedResults.yes && canStartScan == CanStartScan.yes) {
@@ -31,6 +33,43 @@ class WiFiScannerController {
       }
     } catch (e) {
       _scanStatus = 'Permission check failed: $e\nPlease:\n• Enable WiFi\n• Enable Location Services\n• Grant location permission to this app';
+    }
+  }
+
+  /// Auto-scan when requirements are met
+  void _autoScan() {
+    // Add a small delay to ensure UI is ready
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (!_isScanning && _networks.isEmpty) {
+        startScan();
+      }
+    });
+  }
+
+  /// Start periodic permission checking for auto-scan
+  void startPermissionMonitoring() {
+    _scanTimer?.cancel();
+    _scanTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      _checkAndAutoScan();
+    });
+  }
+
+  /// Check permissions and auto-scan if available
+  Future<void> _checkAndAutoScan() async {
+    try {
+      final canGetScannedResults = await WiFiScan.instance.canGetScannedResults();
+      final canStartScan = await WiFiScan.instance.canStartScan();
+      
+      // If permissions become available and we're not already scanning
+      if (canGetScannedResults == CanGetScannedResults.yes && 
+          canStartScan == CanStartScan.yes && 
+          !_isScanning && 
+          _networks.isEmpty) {
+        _scanStatus = 'Requirements met - Auto-scanning...';
+        startScan();
+      }
+    } catch (e) {
+      // Ignore errors during periodic checking
     }
   }
 
