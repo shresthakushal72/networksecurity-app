@@ -221,4 +221,30 @@ class WiFiScannerController {
 
   /// Get the number of networks found
   int get networkCount => _networks.length;
+
+  // ==================== PERMISSION MANAGEMENT ====================
+
+  /// Request permissions for WiFi scanning
+  /// This method provides user guidance for enabling required permissions
+  Future<void> requestPermissions() async {
+    _scanStatus = 'To scan WiFi networks, please:\n• Grant location permission when prompted\n• Enable Location Services in device settings\n• Ensure WiFi is enabled';
+    
+    // Wait a moment then recheck permissions
+    await Future.delayed(const Duration(seconds: 2));
+    await checkPermissions();
+  }
+
+  /// Get permission status for debugging
+  String getPermissionStatus() {
+    return 'Scan Status: $_scanStatus';
+  }
+
+  // ==================== RESOURCE CLEANUP ====================
+
+  /// Clean up resources when controller is disposed
+  /// This prevents memory leaks and stops background timers
+  void dispose() {
+    stopPermissionMonitoring();
+    _networks.clear();
+  }
 }

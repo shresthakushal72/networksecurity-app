@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'wifi_scanner_view.dart';
 import 'local_network_scanner_view.dart';
+import 'cybersecurity_dashboard_view.dart';
 
-/// Main navigation view with drawer containing WiFi Scanner and Local Network Scanner
+/// Main navigation view with compact design
 class MainNavigationView extends StatefulWidget {
   const MainNavigationView({super.key});
 
@@ -16,11 +17,13 @@ class _MainNavigationViewState extends State<MainNavigationView> {
   final List<Widget> _pages = [
     const WiFiScannerView(),
     const LocalNetworkScannerView(),
+    const CybersecurityDashboardView(),
   ];
 
   final List<String> _pageTitles = [
     'WiFi Scanner',
-    'Local Network Scanner',
+    'Network Scanner',
+    'Security Dashboard',
   ];
 
   @override
@@ -39,40 +42,65 @@ class _MainNavigationViewState extends State<MainNavigationView> {
           ),
         ],
       ),
-      drawer: _buildNavigationDrawer(),
+      drawer: _buildCompactNavigationDrawer(),
       body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: _buildCompactBottomNavigation(),
+    );
+  }
+
+  /// Build compact bottom navigation
+  Widget _buildCompactBottomNavigation() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
           });
         },
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.wifi_find),
-            label: 'WiFi Scanner',
+            label: 'WiFi',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.network_check),
-            label: 'Network Scanner',
+            label: 'Network',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.security),
+            label: 'Security',
           ),
         ],
         selectedItemColor: Colors.blue[600],
         unselectedItemColor: Colors.grey[600],
         backgroundColor: Colors.white,
-        elevation: 8,
+        elevation: 0,
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
       ),
     );
   }
 
-  /// Build navigation drawer
-  Widget _buildNavigationDrawer() {
+  /// Build compact navigation drawer
+  Widget _buildCompactNavigationDrawer() {
     return Drawer(
       child: Column(
         children: [
-          // Drawer header
-          DrawerHeader(
+          // Compact drawer header
+          Container(
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.blue[600],
               gradient: LinearGradient(
@@ -84,51 +112,62 @@ class _MainNavigationViewState extends State<MainNavigationView> {
                 ],
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
+            child: SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.security,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Network Security',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Scanner App',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  child: const Icon(
-                    Icons.security,
-                    color: Colors.white,
-                    size: 40,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Network Security',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'WiFi & Network Scanner',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 14,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           
-          // Navigation items
+          // Compact navigation items
           Expanded(
             child: ListView(
-              padding: EdgeInsets.zero,
+              padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
-                _buildDrawerItem(
+                _buildCompactDrawerItem(
                   icon: Icons.wifi_find,
                   title: 'WiFi Scanner',
-                  subtitle: 'Scan and analyze WiFi networks',
                   isSelected: _selectedIndex == 0,
                   onTap: () {
                     setState(() {
@@ -137,10 +176,9 @@ class _MainNavigationViewState extends State<MainNavigationView> {
                     Navigator.pop(context);
                   },
                 ),
-                _buildDrawerItem(
+                _buildCompactDrawerItem(
                   icon: Icons.network_check,
-                  title: 'Local Network Scanner',
-                  subtitle: 'Scan devices on your network',
+                  title: 'Network Scanner',
                   isSelected: _selectedIndex == 1,
                   onTap: () {
                     setState(() {
@@ -149,20 +187,29 @@ class _MainNavigationViewState extends State<MainNavigationView> {
                     Navigator.pop(context);
                   },
                 ),
-                const Divider(height: 32),
-                _buildDrawerItem(
+                _buildCompactDrawerItem(
+                  icon: Icons.security,
+                  title: 'Security Dashboard',
+                  isSelected: _selectedIndex == 2,
+                  onTap: () {
+                    setState(() {
+                      _selectedIndex = 2;
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+                const Divider(height: 24, indent: 16, endIndent: 16),
+                _buildCompactDrawerItem(
                   icon: Icons.info_outline,
                   title: 'About',
-                  subtitle: 'App information and help',
                   onTap: () {
                     Navigator.pop(context);
                     _showAppInfo(context);
                   },
                 ),
-                _buildDrawerItem(
+                _buildCompactDrawerItem(
                   icon: Icons.settings,
                   title: 'Settings',
-                  subtitle: 'App configuration',
                   onTap: () {
                     Navigator.pop(context);
                     _showSettings(context);
@@ -176,11 +223,10 @@ class _MainNavigationViewState extends State<MainNavigationView> {
     );
   }
 
-  /// Build individual drawer item
-  Widget _buildDrawerItem({
+  /// Build compact drawer item
+  Widget _buildCompactDrawerItem({
     required IconData icon,
     required String title,
-    required String subtitle,
     bool isSelected = false,
     required VoidCallback onTap,
   }) {
@@ -188,22 +234,22 @@ class _MainNavigationViewState extends State<MainNavigationView> {
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: isSelected ? Colors.blue[50] : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: isSelected
             ? Border.all(color: Colors.blue[200]!, width: 1)
             : null,
       ),
       child: ListTile(
         leading: Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             color: isSelected ? Colors.blue[100] : Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
           ),
           child: Icon(
             icon,
             color: isSelected ? Colors.blue[700] : Colors.grey[700],
-            size: 24,
+            size: 20,
           ),
         ),
         title: Text(
@@ -211,55 +257,52 @@ class _MainNavigationViewState extends State<MainNavigationView> {
           style: TextStyle(
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
             color: isSelected ? Colors.blue[800] : Colors.black87,
-          ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            fontSize: 12,
-            color: isSelected ? Colors.blue[600] : Colors.grey[600],
+            fontSize: 14,
           ),
         ),
         onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        dense: true,
       ),
     );
   }
 
-  /// Show app information dialog
+  /// Show compact app information dialog
   void _showAppInfo(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.security, color: Colors.blue),
-              SizedBox(width: 8),
-              Text('Network Security App'),
+              Icon(Icons.security, color: Colors.blue, size: 20),
+              const SizedBox(width: 8),
+              const Text('Network Security App', style: TextStyle(fontSize: 16)),
             ],
           ),
           content: const SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                Text('This app is for educational purposes only. Network security is complex and cannot be fully automated.'),
-                SizedBox(height: 16),
-                Text('Features:'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Educational network security scanner app.'),
+                SizedBox(height: 12),
+                Text('Features:', style: TextStyle(fontWeight: FontWeight.bold)),
+                SizedBox(height: 4),
+                Text('• WiFi Network Scanning'),
+                Text('• Security Analysis'),
+                Text('• Network Device Discovery'),
+                Text('• Risk Assessment'),
                 SizedBox(height: 8),
-                Text('• 🔍 WiFi Network Scanning'),
-                Text('• 🔒 Security Analysis (WPS, Encryption, etc.)'),
-                Text('• 📱 Local Network Device Discovery'),
-                Text('• ⚠️ Risk Assessment'),
-                Text('• 💡 Security Recommendations'),
-                SizedBox(height: 16),
-                Text('Always verify your network security and consult professionals when needed.'),
+                Text('Always verify network security and consult professionals when needed.', 
+                     style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
               ],
             ),
           ),
-          actions: <Widget>[
+          actions: [
             TextButton(
-              child: const Text('OK'),
               onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
             ),
           ],
         );
@@ -267,30 +310,36 @@ class _MainNavigationViewState extends State<MainNavigationView> {
     );
   }
 
-  /// Show settings dialog
+  /// Show compact settings dialog
   void _showSettings(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.settings, color: Colors.grey),
-              SizedBox(width: 8),
-              Text('Settings'),
+              Icon(Icons.settings, color: Colors.grey, size: 20),
+              const SizedBox(width: 8),
+              const Text('Settings', style: TextStyle(fontSize: 16)),
             ],
           ),
-          content: const Text(
-            'Settings will be available in future updates.\n\n'
-            'For now, ensure you have:\n'
-            '• WiFi enabled\n'
-            '• Location Services enabled\n'
-            '• Location permission granted to this app',
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Settings will be available in future updates.'),
+              SizedBox(height: 8),
+              Text('Requirements:', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 4),
+              Text('• WiFi enabled'),
+              Text('• Location Services enabled'),
+              Text('• Location permission granted'),
+            ],
           ),
-          actions: <Widget>[
+          actions: [
             TextButton(
-              child: const Text('OK'),
               onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
             ),
           ],
         );

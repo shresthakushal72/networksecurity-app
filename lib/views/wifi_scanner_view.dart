@@ -3,7 +3,7 @@ import '../controllers/wifi_scanner_controller.dart';
 import '../models/wifi_network.dart';
 import 'wifi_details_view.dart';
 
-/// Main WiFi Scanner View - PortDroid Style
+/// Main WiFi Scanner View - Compact Design
 class WiFiScannerView extends StatefulWidget {
   const WiFiScannerView({super.key});
 
@@ -19,13 +19,12 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
     super.initState();
     _controller = WiFiScannerController();
     _controller.checkPermissions();
-    // Start monitoring permissions for auto-scan
     _controller.startPermissionMonitoring();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller.stopPermissionMonitoring();
     super.dispose();
   }
 
@@ -33,184 +32,214 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: Column(
+      body: Stack(
         children: [
-          // PortDroid-style header card
-         
-          
-          // Scan controls
-          _buildScanControls(),
-          
-          // Results section
-          Expanded(
-            child: _buildResultsSection(),
+          // Main content
+          Column(
+            children: [
+              // Compact scan controls
+              _buildCompactScanControls(),
+              
+              // Results section
+              Expanded(
+                child: _buildResultsSection(),
+              ),
+            ],
           ),
+
+          // Compact scanning overlay (only when scanning)
+          if (_controller.isScanning) _buildCompactScanningOverlay(),
         ],
       ),
     );
   }
 
-  /// Build PortDroid-style header ca
-
-  /// Build scan controls section
-  Widget _buildScanControls() {
+  /// Build compact scan controls
+  Widget _buildCompactScanControls() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      margin: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Status display
+          // Status display (compact)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.grey[200]!),
             ),
-            child: Column(
+            child: Row(
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          _getStatusIcon(),
-                          color: _getStatusColor(),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            _controller.scanStatus,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey[700],
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 6,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                Icon(
+                  _getStatusIcon(),
+                  color: _getStatusColor(),
+                  size: 20,
                 ),
-                
-                // Additional explanation for requirements
-                if (_controller.scanStatus.contains('requires') || _controller.scanStatus.contains('Enable'))
-                  Container(
-                    margin: const EdgeInsets.only(top: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue[200]!),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _controller.scanStatus,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w500,
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: Colors.blue[700],
-                          size: 16,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Android requires both WiFi and Location to be enabled for network scanning. This is a system security requirement.',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.blue[700],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
           
-          // Action buttons
-          Column(
+          const SizedBox(height: 12),
+          
+          // Action buttons (compact)
+          Row(
             children: [
-              // Permission/Settings buttons (when needed)
-              if (_controller.scanStatus.contains('Enable') || _controller.scanStatus.contains('Grant') || _controller.scanStatus.contains('requires'))
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      // Location Settings button
-                      ElevatedButton.icon(
-                        onPressed: () => _openLocationSettings(),
-                        icon: const Icon(Icons.location_on, size: 16),
-                        label: const Text(
-                          'Location',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                      
-                      const SizedBox(width: 8),
-                      
-                      // WiFi Settings button
-                      ElevatedButton.icon(
-                        onPressed: () => _openWiFiSettings(),
-                        icon: const Icon(Icons.wifi_off, size: 16),
-                        label: const Text(
-                          'WiFi',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                      
-                      const SizedBox(width: 8),
-                      
-                      // App Permissions button
-                      ElevatedButton.icon(
-                        onPressed: () => _requestPermissions(),
-                        icon: const Icon(Icons.security, size: 16),
-                        label: const Text(
-                          'Permissions',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.purple,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ],
+              // Scan button
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _controller.isScanning ? null : _startScan,
+                  icon: _controller.isScanning 
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.wifi_find, size: 16),
+                  label: Text(
+                    _controller.isScanning ? 'Scanning...' : 'Scan WiFi',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue[600],
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
+              ),
               
-                             // Spacing when buttons are shown
-               if (_controller.scanStatus.contains('Enable') || _controller.scanStatus.contains('Grant') || _controller.scanStatus.contains('requires'))
-                 const SizedBox(height: 12),
-               
-               
+              const SizedBox(width: 8),
+              
+              // Permission buttons (when needed)
+              if (_controller.scanStatus.contains('Enable') || _controller.scanStatus.contains('Grant') || _controller.scanStatus.contains('requires'))
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _requestPermissions(),
+                    icon: const Icon(Icons.security, size: 16),
+                    label: const Text(
+                      'Permissions',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange[600],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
+          
+          // Additional info (only when needed)
+          if (_controller.scanStatus.contains('requires') || _controller.scanStatus.contains('Enable'))
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue[700], size: 14),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'WiFi & Location required for scanning',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.blue[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  /// Build compact scanning overlay (toast-style)
+  Widget _buildCompactScanningOverlay() {
+    return Positioned(
+      top: 120, // Below the scan controls
+      left: 16,
+      right: 16,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.blue[600],
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Compact progress indicator
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            const SizedBox(width: 12),
+            
+            // Status text
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Scanning WiFi Networks...',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (_controller.networks.isNotEmpty)
+                    Text(
+                      'Found ${_controller.networks.length} networks',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 12,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -263,7 +292,6 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
               color: Colors.blue[600],
               backgroundColor: Colors.white,
               child: ListView.builder(
-                // Add padding to allow pull-to-refresh to work
                 padding: const EdgeInsets.only(top: 8),
                 itemCount: _controller.networks.length,
                 itemBuilder: (context, index) {
@@ -281,71 +309,33 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
   /// Build empty state
   Widget _buildEmptyState() {
     return Center(
-      child: Container(
-        margin: const EdgeInsets.all(32),
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.wifi_off,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No WiFi Networks Found',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
             ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.wifi_off,
-              size: 64,
-              color: Colors.grey[400],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Pull down to scan or use the scan button above',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No WiFi Networks Found',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Pull down to scan or use the scan button below',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _controller.isScanning ? null : _startScan,
-              icon: _controller.isScanning 
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : const Icon(Icons.wifi_find, size: 18),
-              label: Text(
-                _controller.isScanning ? 'Scanning...' : 'Scan WiFi Networks',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[600],
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ],
-        ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -486,7 +476,6 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
                 const SizedBox(height: 16),
                 
                 // Network details in a grid layout
-                const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -562,66 +551,6 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
     );
   }
 
-  /// Build compact info chip
-  Widget _buildInfoChip(String label, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!, width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: Colors.grey[600]),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              '$label: $value',
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey[700],
-                fontWeight: FontWeight.w500,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build frequency band chip
-  Widget _buildFrequencyBandChip(String band, int colorValue) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Color(colorValue),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white, width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.radio, size: 14, color: Colors.white),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              band,
-              style: const TextStyle(
-                fontSize: 11,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   /// Get shortened security string to prevent overflow
   String _getShortSecurity(String capabilities) {
     if (capabilities.contains('WPA3')) return 'WPA3';
@@ -653,77 +582,6 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
   void _requestPermissions() async {
     await _controller.requestPermissions();
     setState(() {});
-  }
-
-  /// Check permissions and auto-scan if available
-  void _checkPermissionsAndAutoScan() async {
-    await _controller.checkPermissions();
-    setState(() {});
-  }
-
-  /// Open WiFi settings
-  void _openWiFiSettings() {
-    // Show a dialog to guide user to WiFi settings
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.wifi, color: Colors.blue),
-              SizedBox(width: 8),
-              Text('Enable WiFi'),
-            ],
-          ),
-          content: const Text(
-            'WiFi must be enabled to scan for networks:\n\n'
-            '1. Go to Settings\n'
-            '2. Tap on WiFi\n'
-            '3. Turn on WiFi\n'
-            '4. Return to this app and try scanning again',
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  /// Open Location settings
-  void _openLocationSettings() {
-    // Show a dialog to guide user to Location settings
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.location_on, color: Colors.orange),
-              SizedBox(width: 8),
-              Text('Enable Location'),
-            ],
-          ),
-          content: const Text(
-            'Location Services are required for WiFi scanning on Android:\n\n'
-            '1. Go to Settings\n'
-            '2. Tap on Location\n'
-            '3. Turn on Location Services\n'
-            '4. Also grant location permission to this app\n'
-            '5. Return to this app and try scanning again',
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   /// Navigate to WiFi details page
@@ -767,45 +625,6 @@ class _WiFiScannerViewState extends State<WiFiScannerView> {
           borderRadius: BorderRadius.circular(8),
         ),
       ),
-    );
-  }
-
-  /// Show security information dialog
-  void _showSecurityInfo(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('WiFi Security Information'),
-          content: const SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                Text('This app is for educational purposes only. WiFi security is complex and cannot be fully automated. Always verify your router\'s settings and use strong passwords.'),
-                SizedBox(height: 16),
-                Text('WPS (Wi-Fi Protected Setup) is a simple way to connect to a Wi-Fi network, but it can be vulnerable to brute force attacks. If your router supports WPS, it\'s recommended to disable it.'),
-                SizedBox(height: 16),
-                Text('To improve your WiFi security, consider:'),
-                SizedBox(height: 8),
-                Text('• 🔒 Use strong WPA2/WPA3 passwords'),
-                Text('• 🔒 Enable MAC address filtering'),
-                Text('• 🔒 Use a VPN'),
-                Text('• 🔒 Regularly update your router firmware'),
-                Text('• 🔒 Monitor network activity'),
-                Text('• 🔒 Use a firewall'),
-                Text('• 🔒 Consider using a wired connection instead of WiFi'),
-                SizedBox(height: 16),
-                Text('Always verify the security of your network and your router\'s settings. If you are unsure, consult a professional.'),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        );
-      },
     );
   }
 }
